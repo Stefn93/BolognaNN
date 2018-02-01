@@ -6,7 +6,7 @@ from decimal import Decimal
 
 Xcoord = np.zeros(3000)
 Ycoord = np.zeros(3000)
-kmlName = 'Zona Bolognina.kml'
+kmlName = 'Zona San Donato.kml'
 
 
 with open('data/Bologna gps data/' + kmlName) as kml:
@@ -23,8 +23,9 @@ with open('data/Bologna gps data/' + kmlName) as kml:
 coordNum = i
 Xcoord = Xcoord[:coordNum]
 Ycoord = Ycoord[:coordNum]
-print(Xcoord)
-print(Ycoord)
+#print(Xcoord)
+#print(Ycoord)
+print('Total number of coordinates: ' + coordNum)
 
 startnsize = 'https://maps.googleapis.com/maps/api/streetview'
 size = '?size=300x300'
@@ -36,8 +37,9 @@ for i in range(coordNum+1):
     for j in range(4):
         image_url = startnsize + size + location + str(Xcoord[i-1]) + ',' + str(Ycoord[i-1]) \
                     + heading + str(j * 90) + pitch + APIkey
-        fileName = 'data/Bolognina/' + str(Xcoord[i-1]) + 'X_' + str(Ycoord[i-1]) + 'Y_' + str(j*90) + 'deg.jpg'
+        fileName = 'data/San Donato/' + str(Xcoord[i-1]) + 'X_' + str(Ycoord[i-1]) + 'Y_' + str(j*90) + 'deg.jpg'
         if not Path(fileName).exists():
             img_data = requests.get(image_url).content
             with open(fileName, 'wb') as handler:
                 handler.write(img_data)
+    print(str(int((i/coordNum)*100))+'%')
