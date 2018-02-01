@@ -6,7 +6,7 @@ from decimal import Decimal
 
 Xcoord = np.zeros(3000)
 Ycoord = np.zeros(3000)
-kmlName = 'Zona Casteldebole.kml'
+kmlName = 'Zona Bolognina.kml'
 
 
 with open('data/Bologna gps data/' + kmlName) as kml:
@@ -36,7 +36,7 @@ for i in range(coordNum+1):
     for j in range(4):
         image_url = startnsize + size + location + str(Xcoord[i-1]) + ',' + str(Ycoord[i-1]) \
                     + heading + str(j * 90) + pitch + APIkey
-        fileName = 'data/Casteldebole/' + str(Xcoord[i-1]) + 'X_' + str(Ycoord[i-1]) + 'Y_' + str(j*90) + 'deg.jpg'
+        fileName = 'data/Bolognina/' + str(Xcoord[i-1]) + 'X_' + str(Ycoord[i-1]) + 'Y_' + str(j*90) + 'deg.jpg'
         if not Path(fileName).exists():
             img_data = requests.get(image_url).content
             with open(fileName, 'wb') as handler:
