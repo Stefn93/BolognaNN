@@ -2,11 +2,12 @@ import requests
 import sys, csv
 from collections import defaultdict
 import numpy as np
+from pathlib import Path
 from decimal import Decimal
 
 Xcoord = np.zeros(3000)
 Ycoord = np.zeros(3000)
-kmlName = 'Zona Centro.kml'
+kmlName = 'Zona Casteldebole.kml'
 
 
 with open('data/Bologna gps data/' + kmlName) as kml:
@@ -20,12 +21,21 @@ with open('data/Bologna gps data/' + kmlName) as kml:
                 Ycoord[i] = Decimal(v)
         i += 1
 
-Xcoord = Xcoord[:i]
-Ycoord = Ycoord[:i]
+coordNum = i
+Xcoord = Xcoord[:coordNum]
+Ycoord = Ycoord[:coordNum]
 print(Xcoord)
 print(Ycoord)
 
-
-#img_data = requests.get(image_url).content
-#with open('image_name.jpg', 'wb') as handler:
-#    handler.write(img_data)
+startnsize = 'https://maps.googleapis.com/maps/api/streetview?size=300x300&location='
+heading =  '&heading='
+pitch = '&pitch=0'
+APIkey = '&key=AIzaSyCKBuiVEKcPBJk3h29HQxXPOUwOb59F3Cc'
+for i in range(coordNum+1):
+    for j in range(4):
+        image_url = startnsize + str(Xcoord[i-1]) + ',' + str(Ycoord[i-1]) + heading + str(j * 90) + pitch + APIkey
+        fileName = 'data/Casteldebole/' + str(Xcoord[i-1]) + 'X_' + str(Ycoord[i-1]) + 'Y_' + str(j*90) + 'deg.jpg'
+        if not Path(fileName).exists():
+            img_data = requests.get(image_url).content
+            with open(fileName, 'wb') as handler:
+                handler.write(img_data)
