@@ -29,10 +29,16 @@ trainsetDir = 'bologna_train/'
 
 testsetDir = 'bologna_test/'
 
-with open('labels.lbl', 'rb') as f:
-    labels = pickle.load(f)
+with open('train_labels.lbl', 'rb') as f:
+    train_labels = pickle.load(f)
 
-labels = np.asarray(labels)
+train_labels = np.asarray(train_labels)
+
+with open('test_labels.lbl', 'rb') as f:
+    test_labels = pickle.load(f)
+
+test_labels = np.asarray(test_labels)
+
 
 # Data generators
 
@@ -42,7 +48,7 @@ train_datagen = ImageDataGenerator(rescale=1./255)
 #test_datagen = ImageDataGenerator()
 test_datagen = ImageDataGenerator(rescale=1./255)
 
-
+train_generator = train_datagen.flow()
 
 #train_generator = train_datagen.flow_from_directory(directory=trainsetDir, batch_size=batchSize, target_size=(300,300), shuffle=True)
 #test_generator = test_datagen.flow_from_directory(directory=testsetDir, batch_size=batchSize, target_size=(300,300))
