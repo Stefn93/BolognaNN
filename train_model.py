@@ -1,11 +1,11 @@
 
 from __future__ import print_function
 import h5py
-from keras.preprocessing.image import ImageDataGenerator
-from keras.models import *
-from keras.layers import *
-from keras.optimizers import *
-from keras.applications import *
+#from keras.preprocessing.image import ImageDataGenerator
+#from keras.models import *
+#from keras.layers import *
+#from keras.optimizers import *
+#from keras.applications import *
 import numpy as np
 import pickle
 from PIL import Image
@@ -22,6 +22,84 @@ def orderedList(folderPath):
     files.sort(key=getint)
     return files
 
+def normalizeValues(x, y, minX, minY, maxX, maxY):
+    values = np.zeros(30000)
+
+    x = (x - minX) / (maxX - minX)
+    y = (y - minY) / (maxY - minY)
+
+    return x, y
+
+def deNormalizeValues(x, y, minX, minY, maxX, maxY):
+    values = np.zeros(30000)
+
+    x = x * (maxX - minX) + minX
+    y = y * (maxY - minY) + minY
+
+    return x, y
+
+def serializeNorm(xy, str, minX, minY, maxX, maxY):
+    labels = []
+    # for file in os.listdir(file):
+    #     file = file.replace(".jpg", "")
+    #     file = file.split('_')
+    #     x = float(file[1].replace('X', ""))
+    #     y = float(file[2].replace('Y', ""))
+    for x, y in xy:
+        labels.append(normalizeValues(x, y, minX, minY, maxX, maxY))
+
+    with open(str + '.lbl', 'wb') as f:
+        pickle.dump(labels, f)
+
+def findMinMaxCoord(trainlabels, testlabels):
+    minX = 999.0
+    minY = 999.0
+    maxX = 0.0
+    maxY = 0.0
+
+    for x, y in trainlabels:
+        if x < minX:
+            minX = x
+        if x > maxX:
+            maxX = x
+        if y < minY:
+            minY = y
+        if y > maxY:
+            maxY = y
+
+    for x, y in testlabels:
+        if x < minX:
+            minX = x
+        if x > maxX:
+            maxX = x
+        if y < minY:
+            minY = y
+        if y > maxY:
+            maxY = y
+
+    print(str(minX) + ', ' + str(maxX) + ', ' + str(minY) + ', ' + str(maxY))
+    return minX, minY, maxX, maxY
+
+with open('test_labels.lbl', 'rb') as fa:
+    trainlabels = pickle.load(fa)
+with open('test_labels.lbl', 'rb') as fe:
+    testlabels = pickle.load(fe)
+
+minX, minY, maxX, maxY = findMinMaxCoord(trainlabels, testlabels)
+
+# serializeNorm(trainlabels, 'trainNorm', minX, minY, maxX, maxY)
+
+# serializeNorm(testlabels, 'testNorm', minX, minY, maxX, maxY)
+
+with open('trainNorm.lbl', 'rb') as f:
+    f = pickle.load(f)
+    for i in range(len(f)):
+        print(str(f[i]))
+with open('testNorm.lbl', 'rb') as f:
+    f = pickle.load(f)
+    for i in range(len(f)):
+        print(str(f[i]))
+exit()
 
 batchSize = 64
 
