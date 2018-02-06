@@ -6,13 +6,21 @@ from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
 from keras.applications import *
-
-
-
 import numpy as np
 import pickle
-
+from PIL import Image
 import os
+
+
+def getint(name):
+    basename = name.partition('.')
+    parts = name.partition('_')
+    return int(parts[0])
+
+def orderedList(folderPath):
+    files = os.listdir(folderPath)
+    files.sort(key=getint)
+    return files
 
 
 batchSize = 64
@@ -25,9 +33,9 @@ model_name = 'Bologna_Zones_Model'
 
 dataset = 'bologna_dataset_sparse'
 
-trainsetDir = 'bologna_train/'
+trainsetDir = 'bologna_train_sparse/'
 
-testsetDir = 'bologna_test/'
+testsetDir = 'bologna_test_sparse/'
 
 with open('train_labels.lbl', 'rb') as f:
     train_labels = pickle.load(f)
@@ -43,15 +51,30 @@ test_labels = np.asarray(test_labels)
 # Data generators
 
 #train_datagen = ImageDataGenerator()
-train_datagen = ImageDataGenerator(rescale=1./255)
+#train_datagen = ImageDataGenerator(rescale=1./255)
 
 #test_datagen = ImageDataGenerator()
-test_datagen = ImageDataGenerator(rescale=1./255)
+#test_datagen = ImageDataGenerator(rescale=1./255)
 
-train_generator = train_datagen.flow()
+def extractImages(folder, dim):
+    name_list = orderedList(folder)
+    img_structure = np.array(dim)
 
-#train_generator = train_datagen.flow_from_directory(directory=trainsetDir, batch_size=batchSize, target_size=(300,300), shuffle=True)
-#test_generator = test_datagen.flow_from_directory(directory=testsetDir, batch_size=batchSize, target_size=(300,300))
+    i = 0
+    for file in name_list:
+        img = np.asarray(Image.open(folder+file), dtype="uint8")
+        np.append(img_structure, img)
+        #print("Loading" + str(i))
+        i += 1
+
+    return img_structure
+
+train_images = extractImages(trainsetDir, 27715)
+test_images = extractImages(testsetDir, 6928)
+
+train_set = train_images, train_labels
+test_set = test_images, test_labels
+
 
 '''
 #base model
