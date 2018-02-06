@@ -2,16 +2,15 @@
 from __future__ import print_function
 import h5py
 from keras.preprocessing.image import ImageDataGenerator
-from keras.models import Sequential, Model
-from keras.layers import Dense, Dropout, Activation, Flatten, ZeroPadding2D, LeakyReLU, Reshape, Input
-from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D, concatenate
-from keras.optimizers import Adadelta, sgd
-
-
+from keras.models import *
+from keras.layers import *
+from keras.optimizers import *
+from keras.applications import *
 
 
 
 import numpy as np
+import pickle
 
 import os
 
@@ -24,13 +23,16 @@ num_classes = 6
 
 model_name = 'Bologna_Zones_Model'
 
-
+dataset = 'bologna_dataset_sparse'
 
 trainsetDir = 'bologna_train/'
 
 testsetDir = 'bologna_test/'
 
+with open('labels.lbl', 'rb') as f:
+    labels = pickle.load(f)
 
+labels = np.asarray(labels)
 
 # Data generators
 
@@ -42,8 +44,42 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 
 
 
-train_generator = train_datagen.flow_from_directory(directory=trainsetDir, batch_size=batchSize, target_size=(300,300), shuffle=True)
-test_generator = test_datagen.flow_from_directory(directory=testsetDir, batch_size=batchSize, target_size=(300,300))
+#train_generator = train_datagen.flow_from_directory(directory=trainsetDir, batch_size=batchSize, target_size=(300,300), shuffle=True)
+#test_generator = test_datagen.flow_from_directory(directory=testsetDir, batch_size=batchSize, target_size=(300,300))
+
+'''
+#base model
+base_model = DenseNet121(input_shape=(300, 300, 3), weights='imagenet', include_top=False)
+
+# Top Model Block
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(512, activation='relu')(x)
+predictions = Dense(num_classes, activation='softmax')(x)
+
+model = Model(base_model.input, predictions)
+print(model.summary())
+
+for layer in base_model.layers:
+    layer.trainable = False
+
+# compile the model (should be done *after* setting layers to non-trainable)
+model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# train the model on the new data for a few epochs
+model.fit_generator(
+        train_generator,
+
+        epochs=epochs,
+
+        validation_data=test_generator,
+
+        validation_steps=6936//batchSize,
+
+        steps_per_epoch=27743//batchSize
+)
+'''
+
 '''
 model = Sequential()
 
