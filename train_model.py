@@ -10,37 +10,6 @@ import numpy as np
 import pickle
 from PIL import Image
 import os
-from NormAndDenorm import deNormalizeValues
-
-'''
-def getint(name):
-    basename = name.partition('.')
-    parts = name.partition('_')
-    return int(parts[0])
-
-def orderedList(folderPath):
-    files = os.listdir(folderPath)
-    files.sort(key=getint)
-    return files
-
-def extractImages(folder, dim, name):
-    name_list = orderedList(folder)
-    img_structure = np.empty(dim)
-
-    i = 0
-    for file in name_list:
-        img = np.asarray(Image.open(folder+file), dtype="uint8")
-        np.append(img_structure, img)
-        i += 1
-
-    with open(name + '.imgs', 'wb') as f:
-        pickle.dump(img_structure, f)
-
-    return img_structure
-
-train_images = extractImages(trainsetDir, 27715, 'trainset')
-test_images = extractImages(testsetDir, 6928, 'testset')
-'''
 
 batchSize = 64
 
@@ -56,22 +25,58 @@ trainsetDir = 'bologna_train_sparse/'
 
 testsetDir = 'bologna_test_sparse/'
 
-with open('trainNorm.lbl', 'rb') as f:
-    train_labels = pickle.load(f)
 
-train_labels = np.asarray(train_labels)
+def getint(name):
+    basename = name.partition('.')
+    parts = name.partition('_')
+    return int(parts[0])
 
-with open('testNorm.lbl', 'rb') as f2:
-    test_labels = pickle.load(f2)
+def orderedList(folderPath):
+    files = os.listdir(folderPath)
+    files.sort(key=getint)
+    return files
 
-test_labels = np.asarray(test_labels)
+def extractImages(folder, name):
+    name_list = orderedList(folder)
+    img_structure = []
 
-with open('trainset.imgs', 'rb') as f3:
-    train_images = pickle.load(f3)
+    i = 0
+    for file in name_list:
+        img = np.asarray(Image.open(folder+file))
+        img_structure.append(img)
+        i+=1
+        print('Img ' + str(i))
 
-with open('testset.imgs', 'rb') as f4:
-    test_images = pickle.load(f4)
+    #img_structure = np.array(img_structure)
 
+    with open(name + '.imgs', 'wb') as f:
+        pickle.dump(img_structure, f)
+
+    return img_structure
+
+train_images = np.array(extractImages(trainsetDir, 'trainset'))
+test_images = np.array(extractImages(testsetDir, 'testset'))
+
+
+
+def loadDataset():
+    with open('trainNorm.lbl', 'rb') as f:
+        train_labels = pickle.load(f)
+
+    train_labels = np.asarray(train_labels)
+
+    with open('testNorm.lbl', 'rb') as f:
+        test_labels = pickle.load(f)
+
+    test_labels = np.asarray(test_labels)
+
+    with open('trainset.imgs', 'rb') as f:
+        train_images = pickle.load(f)
+
+    with open('testset.imgs', 'rb') as f:
+        test_images = pickle.load(f)
+
+    return train_images, train_labels, test_images, test_labels
 
 # Data generators
 
@@ -81,42 +86,10 @@ train_datagen = ImageDataGenerator(rescale=1./255)
 #test_datagen = ImageDataGenerator()
 test_datagen = ImageDataGenerator(rescale=1./255)
 
-train_generator = train_datagen.flow(train_images, train_labels, batch_size=batchSize)
-test_generator = test_datagen.flow(test_images, test_labels, batch_size=batchSize)
+#train_generator = train_datagen.flow(train_images, train_labels, batch_size=batchSize)
+#test_generator = test_datagen.flow(test_images, test_labels, batch_size=batchSize)
 
 
-'''
-#base model
-base_model = DenseNet121(input_shape=(300, 300, 3), weights='imagenet', include_top=False)
-
-# Top Model Block
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-x = Dense(512, activation='relu')(x)
-predictions = Dense(num_classes, activation='softmax')(x)
-
-model = Model(base_model.input, predictions)
-print(model.summary())
-
-for layer in base_model.layers:
-    layer.trainable = False
-
-# compile the model (should be done *after* setting layers to non-trainable)
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['accuracy'])
-
-# train the model on the new data for a few epochs
-model.fit_generator(
-        train_generator,
-
-        epochs=epochs,
-
-        validation_data=test_generator,
-
-        validation_steps=6936//batchSize,
-
-        steps_per_epoch=27743//batchSize
-)
-'''
 
 
 model = Sequential()
@@ -134,56 +107,18 @@ model.add(Dense(2, activation='sigmoid'))
 
 
 
-'''
-input_shape = Input(shape=(160,150,3))
-
-C_1A = Conv2D(filters=64, kernel_size=(2,15), strides=(2,15), activation="elu", kernel_initializer='glorot_normal', name='conv2d_1A')(input_shape)
-C_2A = Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='glorot_normal', name='conv2d_2A')(C_1A)
-P_1A = MaxPooling2D(pool_size=(2, 2), strides=2, name='pool2d_1A')(C_2A)
-C_3A = Conv2D(filters=64, kernel_size=(2,2), strides=(2,2), activation="elu", kernel_initializer='glorot_normal', name='conv2d_3A')(P_1A)
-FlatA = Flatten()(C_3A)
-DropA = Dropout(0.5)(FlatA)
-D1A = Dense(128, activation='elu', kernel_initializer='glorot_normal')(DropA)
-
-C_1B = Conv2D(filters=32, kernel_size=(3,3), strides=(3,3), activation="elu", kernel_initializer='glorot_normal', name='conv2d_1B')(input_shape)
-C_2B = Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='glorot_normal', name='conv2d_2B')(C_1B)
-P_1B = MaxPooling2D(pool_size=(2, 2), strides=2, name='pool2d_1B')(C_2B)
-C_3B = Conv2D(filters=128, kernel_size=(2,2), strides=(2,2), activation="elu", kernel_initializer='glorot_normal', name='conv2d_3B')(P_1B)
-FlatB = Flatten()(C_3B)
-D1B = Dense(128, activation='elu', kernel_initializer='glorot_normal')(FlatB)
-
-Merged = concatenate([D1A, D1B])
-Final = Dense(num_classes, activation='softmax')(Merged)
-
-model = Model(input=input_shape, output=Final)
-'''
-
 #Summary
 model.summary()
 
 
 #Compile model
-optimizer = 'rmsprop'
-model.compile(loss='mean_squared_error',
-
-              optimizer=optimizer,
-
-              metrics=['accuracy'])
+#model.compile(loss='mean_squared_error', optimizer='rmsprop', metrics=['accuracy'])
 
 
 
 #Training
-model.fit_generator(
+#model.fit_generator(train_generator, epochs=epochs, validation_data=test_generator, validation_steps=6928//batchSize, steps_per_epoch=27715//batchSize)
 
-        train_generator,
-
-        epochs=epochs,
-
-        validation_data=test_generator,
-
-        validation_steps=6928//batchSize,
-
-        steps_per_epoch=27715//batchSize)
 
 '''
 # serialize model to YAML
