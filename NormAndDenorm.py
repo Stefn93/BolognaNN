@@ -1,30 +1,31 @@
-import numpy as np
 import pickle
 
-def normalizeValues(x, y, minX, minY, maxX, maxY):
+minX = minY = 999.0
+maxX = maxY = 0.0
+
+
+def normalizeValues(x, y):
     x = (x - minX) / (maxX - minX)
     y = (y - minY) / (maxY - minY)
     return x, y
+
 
 def deNormalizeValues(x, y, minX, minY, maxX, maxY):
     x = x * (maxX - minX) + minX
     y = y * (maxY - minY) + minY
     return x, y
 
-def serializeNorm(xy, str, minX, minY, maxX, maxY):
+
+def serializeNorm(xy, str):
     labels = []
     for x, y in xy:
-        labels.append(normalizeValues(x, y, minX, minY, maxX, maxY))
+        labels.append(normalizeValues(x, y))
 
     with open(str + '.lbl', 'wb') as f:
         pickle.dump(labels, f)
 
-def findMinMaxCoord(trainlabels, testlabels):
-    minX = 999.0
-    minY = 999.0
-    maxX = 0.0
-    maxY = 0.0
 
+def findMinMaxCoord(trainlabels, testlabels):
     for x, y in trainlabels:
         if x < minX:
             minX = x
