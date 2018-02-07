@@ -21,7 +21,7 @@ def orderedList(folderPath):
     files = os.listdir(folderPath)
     files.sort(key=getint)
     return files
-'''
+
 def normalizeValues(x, y, minX, minY, maxX, maxY):
     values = np.zeros(30000)
 
@@ -80,16 +80,16 @@ def findMinMaxCoord(trainlabels, testlabels):
     print(str(minX) + ', ' + str(maxX) + ', ' + str(minY) + ', ' + str(maxY))
     return minX, minY, maxX, maxY
 
-with open('test_labels.lbl', 'rb') as fa:
+with open('train_labels.lbl', 'rb') as fa:
     trainlabels = pickle.load(fa)
 with open('test_labels.lbl', 'rb') as fe:
     testlabels = pickle.load(fe)
 
 minX, minY, maxX, maxY = findMinMaxCoord(trainlabels, testlabels)
 
-# serializeNorm(trainlabels, 'trainNorm', minX, minY, maxX, maxY)
+serializeNorm(trainlabels, 'trainNorm', minX, minY, maxX, maxY)
 
-# serializeNorm(testlabels, 'testNorm', minX, minY, maxX, maxY)
+serializeNorm(testlabels, 'testNorm', minX, minY, maxX, maxY)
 
 with open('trainNorm.lbl', 'rb') as f:
     f = pickle.load(f)
@@ -99,7 +99,9 @@ with open('testNorm.lbl', 'rb') as f:
     f = pickle.load(f)
     for i in range(len(f)):
         print(str(f[i]))
-'''
+
+
+exit()
 
 '''
 def extractImages(folder, dim, name):
