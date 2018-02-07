@@ -1,11 +1,11 @@
 
 from __future__ import print_function
 import h5py
-#from keras.preprocessing.image import ImageDataGenerator
-#from keras.models import *
-#from keras.layers import *
-#from keras.optimizers import *
-#from keras.applications import *
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import *
+from keras.layers import *
+from keras.optimizers import *
+from keras.applications import *
 import numpy as np
 import pickle
 from PIL import Image
@@ -21,7 +21,7 @@ def orderedList(folderPath):
     files = os.listdir(folderPath)
     files.sort(key=getint)
     return files
-
+'''
 def normalizeValues(x, y, minX, minY, maxX, maxY):
     values = np.zeros(30000)
 
@@ -99,13 +99,33 @@ with open('testNorm.lbl', 'rb') as f:
     f = pickle.load(f)
     for i in range(len(f)):
         print(str(f[i]))
-exit()
+'''
+
+'''
+def extractImages(folder, dim, name):
+    name_list = orderedList(folder)
+    img_structure = np.empty(dim)
+
+    i = 0
+    for file in name_list:
+        img = np.asarray(Image.open(folder+file), dtype="uint8")
+        np.append(img_structure, img)
+        i += 1
+
+    with open(name + '.imgs', 'wb') as f:
+        pickle.dump(img_structure, f)
+
+    return img_structure
+
+train_images = extractImages(trainsetDir, 27715, 'trainset')
+test_images = extractImages(testsetDir, 6928, 'testset')
+'''
 
 batchSize = 64
 
-epochs = 5
+epochs = 20
 
-num_classes = 6
+num_classes = 2
 
 model_name = 'Bologna_Zones_Model'
 
@@ -115,43 +135,33 @@ trainsetDir = 'bologna_train_sparse/'
 
 testsetDir = 'bologna_test_sparse/'
 
-with open('train_labels.lbl', 'rb') as f:
+with open('trainNorm.lbl', 'rb') as f:
     train_labels = pickle.load(f)
 
 train_labels = np.asarray(train_labels)
 
-with open('test_labels.lbl', 'rb') as f:
-    test_labels = pickle.load(f)
+with open('testNorm.lbl', 'rb') as f2:
+    test_labels = pickle.load(f2)
 
 test_labels = np.asarray(test_labels)
+
+with open('trainset.imgs', 'rb') as f3:
+    train_images = pickle.load(f3)
+
+with open('testset.imgs', 'rb') as f4:
+    test_images = pickle.load(f4)
 
 
 # Data generators
 
 #train_datagen = ImageDataGenerator()
-#train_datagen = ImageDataGenerator(rescale=1./255)
+train_datagen = ImageDataGenerator(rescale=1./255)
 
 #test_datagen = ImageDataGenerator()
-#test_datagen = ImageDataGenerator(rescale=1./255)
+test_datagen = ImageDataGenerator(rescale=1./255)
 
-def extractImages(folder, dim):
-    name_list = orderedList(folder)
-    img_structure = np.array(dim)
-
-    i = 0
-    for file in name_list:
-        img = np.asarray(Image.open(folder+file), dtype="uint8")
-        np.append(img_structure, img)
-        #print("Loading" + str(i))
-        i += 1
-
-    return img_structure
-
-train_images = extractImages(trainsetDir, 27715)
-test_images = extractImages(testsetDir, 6928)
-
-train_set = train_images, train_labels
-test_set = test_images, test_labels
+train_generator = train_datagen.flow(train_images, train_labels, batch_size=batchSize)
+test_generator = test_datagen.flow(test_images, test_labels, batch_size=batchSize)
 
 
 '''
@@ -187,19 +197,21 @@ model.fit_generator(
 )
 '''
 
-'''
+
 model = Sequential()
 
-model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='glorot_uniform', dilation_rate=1))
-model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='glorot_uniform'))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='he_normal'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
-model.add(Conv2D(filters=32, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='glorot_uniform'))
-model.add(Conv2D(filters=64, kernel_size=(2,2), strides=(1,1),activation="elu", kernel_initializer='glorot_uniform'))
+model.add(Conv2D(filters=32, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
 model.add(Flatten())
 model.add(Dropout(0.5))
-model.add(Dense(128, activation='elu', kernel_initializer='glorot_uniform'))
-model.add(Dense(num_classes, activation='softmax'))
-'''
+model.add(Dense(128, activation='elu', kernel_initializer='he_normal'))
+model.add(Dense(32, activation='elu', kernel_initializer='he_normal'))
+model.add(Dense(2, activation='sigmoid'))
+
+
 
 '''
 input_shape = Input(shape=(160,150,3))
@@ -225,12 +237,13 @@ Final = Dense(num_classes, activation='softmax')(Merged)
 model = Model(input=input_shape, output=Final)
 '''
 
-#Compile model
+#Summary
+model.summary()
 
-#optimizer = 'adadelta'
-'''
+
+#Compile model
 optimizer = 'rmsprop'
-model.compile(loss='categorical_crossentropy',
+model.compile(loss='mean_squared_error',
 
               optimizer=optimizer,
 
@@ -238,14 +251,7 @@ model.compile(loss='categorical_crossentropy',
 
 
 
-#Summary
-
-model.summary()
-
-
-
 #Training
-#model.load_weights('arch_weights/MuGeRe Weights_F5.h5', by_name=True)
 model.fit_generator(
 
         train_generator,
@@ -254,11 +260,11 @@ model.fit_generator(
 
         validation_data=test_generator,
 
-        validation_steps=6940//batchSize,
+        validation_steps=6928//batchSize,
 
-        steps_per_epoch=27739//batchSize)
+        steps_per_epoch=27715//batchSize)
 
-
+'''
 # serialize model to YAML
 model_yaml = model.to_yaml()
 with open("Bologna_Architecture_1.yaml", "w") as yaml_file:
