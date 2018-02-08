@@ -11,20 +11,16 @@ import pickle
 from PIL import Image
 import os
 
-batchSize = 64
-
-epochs = 20
-
-num_classes = 2
-
 model_name = 'Bologna_Zones_Model'
-
 dataset = 'bologna_dataset_sparse'
-
 trainsetDir = 'bologna_train_sparse/'
-
 testsetDir = 'bologna_test_sparse/'
 
+batchSize = 32
+epochs = 20
+num_classes = 2
+train_examples = 27715
+test_examples = 6928
 
 def getint(name):
     basename = name.partition('.')
@@ -36,30 +32,41 @@ def orderedList(folderPath):
     files.sort(key=getint)
     return files
 
-def extractImages(folder, name):
-    name_list = orderedList(folder)
-    img_structure = []
+def extractBatch(dataFolder, data_names, startIndex):
+    img_batch = []
 
     i = 0
-    for file in name_list:
-        img = np.asarray(Image.open(folder+file))
-        img_structure.append(img)
+    k = 0
+    for image in data_names:
+        if(i >= startIndex and i < startIndex + batchSize):
+            img = np.asarray(Image.open(dataFolder+image))
+            img_batch.append(img)
+            k += 1
         i+=1
-        print('Img ' + str(i))
+        if(k==batchSize): break;
 
-    #img_structure = np.array(img_structure)
+    img_batch = np.array(img_batch)
 
-    with open(name + '.imgs', 'wb') as f:
-        pickle.dump(img_structure, f)
+    return img_batch
 
-    return img_structure
+def extractLabelBatch(labels, startIndex):
+    label_batch = []
 
-train_images = np.array(extractImages(trainsetDir, 'trainset'))
-test_images = np.array(extractImages(testsetDir, 'testset'))
+    i = 0
+    k = 0
+    for label in labels:
+        if(i >= startIndex and i < startIndex + batchSize):
+            label_batch.append(label)
+            k += 1
+        i+=1
+        if(k==batchSize): break;
+
+    label_batch = np.array(label_batch)
+
+    return label_batch
 
 
-
-def loadDataset():
+def loadLabels():
     with open('trainNorm.lbl', 'rb') as f:
         train_labels = pickle.load(f)
 
@@ -70,30 +77,42 @@ def loadDataset():
 
     test_labels = np.asarray(test_labels)
 
-    with open('trainset.imgs', 'rb') as f:
-        train_images = pickle.load(f)
+    return train_labels, test_labels
 
-    with open('testset.imgs', 'rb') as f:
-        test_images = pickle.load(f)
+def generateTrainingExamples(trainDir):
+    image_name_list = orderedList(trainDir)
+    train_labels, test_labels = loadLabels()
 
-    return train_images, train_labels, test_images, test_labels
+    while 1:
+        for img_name, img_label in zip(image_name_list, train_labels):
+            img = np.asarray(Image.open(trainDir + img_name))
+            print(np.shape(img))
+            print(np.shape(img_label))
+            yield ({'input': img}, {'output': img_label})
 
-# Data generators
+def generateTestExamples(testDir):
+    image_name_list = orderedList(testDir)
+    train_labels, test_labels = loadLabels()
 
-#train_datagen = ImageDataGenerator()
-train_datagen = ImageDataGenerator(rescale=1./255)
+    while 1:
+        for img_name, img_label in zip(image_name_list, test_labels):
+            img = np.asarray(Image.open(testDir + img_name))
 
-#test_datagen = ImageDataGenerator()
-test_datagen = ImageDataGenerator(rescale=1./255)
-
-#train_generator = train_datagen.flow(train_images, train_labels, batch_size=batchSize)
-#test_generator = test_datagen.flow(test_images, test_labels, batch_size=batchSize)
-
+            yield ({'input': img}, {'output': img_label})
 
 
+def startTraining():
+    image_name_list = orderedList(trainsetDir)
 
+    for i in range(int(train_examples/batchSize)):
+        train_img_batch = extractBatch(trainsetDir, image_name_list, i*batchSize)
+        train_labels, test_labels = loadLabels()
+        train_label_batch = extractLabelBatch(train_labels, i*batchSize)
+        model.train_on_batch(train_img_batch, train_label_batch)
+
+
+#Model
 model = Sequential()
-
 model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
 model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='he_normal'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
@@ -105,19 +124,21 @@ model.add(Dense(128, activation='elu', kernel_initializer='he_normal'))
 model.add(Dense(32, activation='elu', kernel_initializer='he_normal'))
 model.add(Dense(2, activation='sigmoid'))
 
-
-
 #Summary
 model.summary()
 
 
 #Compile model
-#model.compile(loss='mean_squared_error', optimizer='rmsprop', metrics=['accuracy'])
+model.compile(loss='mean_squared_error', optimizer='rmsprop', metrics=['accuracy'])
 
 
 
 #Training
-#model.fit_generator(train_generator, epochs=epochs, validation_data=test_generator, validation_steps=6928//batchSize, steps_per_epoch=27715//batchSize)
+model.fit_generator(generateTrainingExamples(trainsetDir),
+                    epochs=epochs,
+                    validation_data=generateTestExamples(testsetDir),
+                    steps_per_epoch=train_examples//batchSize,
+                    validation_steps=test_examples//batchSize)
 
 
 '''
