@@ -6,6 +6,7 @@ from keras.models import *
 from keras.layers import *
 from keras.optimizers import *
 from keras.applications import *
+import keras.backend as K
 import numpy as np
 import pickle
 from PIL import Image
@@ -46,7 +47,6 @@ def extractBatch(dataFolder, data_names, startIndex):
         if(k==batchSize): break;
 
     img_batch = np.array(img_batch)
-
     return img_batch
 
 def extractLabelBatch(labels, startIndex):
@@ -62,7 +62,6 @@ def extractLabelBatch(labels, startIndex):
         if(k==batchSize): break;
 
     label_batch = np.array(label_batch)
-
     return label_batch
 
 
@@ -86,9 +85,7 @@ def generateTrainingExamples(trainDir):
     while 1:
         for img_name, img_label in zip(image_name_list, train_labels):
             img = np.asarray(Image.open(trainDir + img_name))
-            print(np.shape(img))
-            print(np.shape(img_label))
-            yield ({'input': img}, {'output': img_label})
+            yield (img, img_label)
 
 def generateTestExamples(testDir):
     image_name_list = orderedList(testDir)
@@ -97,8 +94,7 @@ def generateTestExamples(testDir):
     while 1:
         for img_name, img_label in zip(image_name_list, test_labels):
             img = np.asarray(Image.open(testDir + img_name))
-
-            yield ({'input': img}, {'output': img_label})
+            yield (img, img_label)
 
 
 def startTraining():
@@ -108,7 +104,9 @@ def startTraining():
         train_img_batch = extractBatch(trainsetDir, image_name_list, i*batchSize)
         train_labels, test_labels = loadLabels()
         train_label_batch = extractLabelBatch(train_labels, i*batchSize)
-        model.train_on_batch(train_img_batch, train_label_batch)
+        #model.train_on_batch(train_img_batch, train_label_batch)
+        model.fit(train_img_batch, train_label_batch)
+        #print("Batch " + str(i+1))
 
 
 #Model
@@ -129,16 +127,42 @@ model.summary()
 
 
 #Compile model
-model.compile(loss='mean_squared_error', optimizer='rmsprop', metrics=['accuracy'])
+def custom_mse(y_true,y_pred):
+
+    y_true_x = []
+    y_true_y = []
+    y_pred_x = []
+    y_pred_y = []
+    y_calc_x = np.zeros(batchSize)
+    y_calc_y = np.zeros(batchSize)
+
+    print(y_true.shape)
+    print(y_pred.shape)
+    for i in range(batchSize):
+        y_true_x.append(y_true[i][0])
+        y_true_y.append(y_true[i][1])
+
+        y_pred_x.append(y_pred[i][0])
+        y_pred_y.append(y_pred[i][1])
+
+        y_calc_x[i] = y_true_x[i] - y_pred_x[i]
+        y_calc_y[i] = y_true_y[i] - y_pred_y[i]
+
+    res_x = K.mean(y_calc_x)
+    res_y = K.mean(y_calc_y)
+
+    return K.sqrt(K.square(res_x) + K.square(res_y))
+
+model.compile(loss=custom_mse, optimizer='rmsprop', metrics=['accuracy'])
 
 
-
+startTraining()
 #Training
-model.fit_generator(generateTrainingExamples(trainsetDir),
-                    epochs=epochs,
-                    validation_data=generateTestExamples(testsetDir),
-                    steps_per_epoch=train_examples//batchSize,
-                    validation_steps=test_examples//batchSize)
+# model.fit_generator(generateTrainingExamples(trainsetDir),
+#                     epochs=epochs,
+#                     validation_data=generateTestExamples(testsetDir),
+#                     steps_per_epoch=train_examples//batchSize,
+#                     validation_steps=test_examples//batchSize)
 
 
 '''
