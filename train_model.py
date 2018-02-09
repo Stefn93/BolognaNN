@@ -24,39 +24,38 @@ num_classes = 2
 train_examples = 27715
 test_examples = 6928
 
+
 def getint(name):
     basename = name.partition('.')
     parts = name.partition('_')
     return int(parts[0])
+
 
 def orderedList(folderPath):
     files = os.listdir(folderPath)
     files.sort(key=getint)
     return files
 
-def extractBatch(dataFolder, data_names, startIndex):
-    img_batch = []
 
+def extractBatch(dataFolder, data_names):
+    img_batch = []
     i = 0
     k = 0
     for image in data_names:
-        if(i >= startIndex and i < startIndex + batchSize):
             img = np.asarray(Image.open(dataFolder+image))
             img_batch.append(img)
-            k += 1
-        i+=1
-        if(k==batchSize): break;
 
     img_batch = np.array(img_batch)
     return img_batch
 
-def extractLabelBatch(labels, startIndex):
+
+def extractLabelBatch(labels, startIndex, end_index):
     label_batch = []
 
     i = 0
     k = 0
     for label in labels:
-        if(i >= startIndex and i < startIndex + batchSize):
+        if(i >= startIndex and i < end_index):
             label_batch.append(label)
             k += 1
         i+=1
@@ -79,40 +78,14 @@ def loadLabels():
 
     return train_labels, test_labels
 
-
-def startTraining():
-    image_name_list = orderedList(trainsetDir)
-    train_labels, test_labels = loadLabels()
-
-    for k in range(epochs):
-        print("Epoch ---> " + str(k + 1))
-        for i in range(int(train_examples/batchSize)):
-            train_img_batch = extractBatch(trainsetDir, image_name_list, i*batchSize)
-            train_label_batch = extractLabelBatch(train_labels, i*batchSize)
-            #model.fit(train_img_batch, train_label_batch, verbose=2)
-            loss, acc = model.train_on_batch(train_img_batch, train_label_batch)
-            print('loss: ' + str(loss) + ', acc: ' + str(acc))
-#Model
-model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
-model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='he_normal'))
-model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
-model.add(Conv2D(filters=32, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
-model.add(Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
-model.add(Flatten())
-model.add(Dropout(0.5))
-model.add(Dense(128, activation='elu', kernel_initializer='he_normal'))
-model.add(Dense(32, activation='elu', kernel_initializer='he_normal'))
-model.add(Dense(2, activation='sigmoid'))
-
-#Summary
-model.summary()
-
-
-
 #Custom loss function, euclidean distance between normalized coordinates
 def custom_loss(y_true, y_pred):
-    return K.mean(K.sqrt(K.square(y_true[:][0] - y_pred[:][0]) + K.square(y_true[:][1] - y_pred[:][1])))
+    x_diff = y_true[:][0] - y_pred[:][0]
+    y_diff = y_true[:][1] - y_pred[:][1]
+    x_diff_square = K.square(x_diff)
+    y_diff_square = K.square(y_diff)
+    xy_sum = x_diff_square + y_diff_square
+    return K.sum(K.sqrt(xy_sum))
 
 #Custom accuracy
 def custom_accuracy(y_true, y_pred):
@@ -130,14 +103,56 @@ def custom_accuracy(y_true, y_pred):
     #print(j/batchSize)
     return K.variable(value=(j/batchSize), dtype='float32')
 
+#Model
+model = Sequential()
+model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='he_normal'))
+model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
+model.add(Conv2D(filters=32, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
+model.add(Flatten())
+model.add(Dropout(0.5))
+model.add(Dense(128, activation='elu', kernel_initializer='he_normal'))
+model.add(Dense(32, activation='elu', kernel_initializer='he_normal'))
+model.add(Dense(2, activation='sigmoid'))
+
+#Summary
+model.summary()
+
+
 #Compile model
-model.compile(loss='mse', optimizer='rmsprop', metrics=['accuracy'])
+model.compile(loss=custom_loss, optimizer='rmsprop', metrics=['accuracy'])
 
 
 #Training
-startTraining()
+image_name_list_train = orderedList(trainsetDir)
+image_name_list_test = orderedList(testsetDir)
+train_labels, test_labels = loadLabels()
+
+def dataGenerator(dir, img_names, labelFile, batch_size):
+    L = len(img_names)
+
+    #this line is just to make the generator infinite, keras needs that
+    while True:
+        batch_start = 0
+        batch_end = batch_size
+
+        while batch_start < L:
+            limit = min(batch_end, L)
+            X = extractBatch(dir, img_names[batch_start:limit])
+            Y = extractLabelBatch(labelFile, batch_start, limit)
+
+            yield (X,Y)
+
+            batch_start += batch_size
+            batch_end += batch_size
 
 
+model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labels, batchSize),
+                    validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
+                    steps_per_epoch=train_examples//batchSize,
+                    validation_steps=test_examples//batchSize,
+                    epochs=1)
 '''
 # serialize model to YAML
 model_yaml = model.to_yaml()
