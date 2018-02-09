@@ -11,6 +11,7 @@ import numpy as np
 import pickle
 from PIL import Image
 import os
+import tensorflow as tf
 
 model_name = 'Bologna_Zones_Model'
 dataset = 'bologna_dataset_sparse'
@@ -18,7 +19,7 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 
 batchSize = 32
-epochs = 20
+epochs = 1
 num_classes = 2
 train_examples = 27715
 test_examples = 6928
@@ -78,37 +79,19 @@ def loadLabels():
 
     return train_labels, test_labels
 
-def generateTrainingExamples(trainDir):
-    image_name_list = orderedList(trainDir)
-    train_labels, test_labels = loadLabels()
-
-    while 1:
-        for img_name, img_label in zip(image_name_list, train_labels):
-            img = np.asarray(Image.open(trainDir + img_name))
-            yield (img, img_label)
-
-def generateTestExamples(testDir):
-    image_name_list = orderedList(testDir)
-    train_labels, test_labels = loadLabels()
-
-    while 1:
-        for img_name, img_label in zip(image_name_list, test_labels):
-            img = np.asarray(Image.open(testDir + img_name))
-            yield (img, img_label)
-
 
 def startTraining():
     image_name_list = orderedList(trainsetDir)
+    train_labels, test_labels = loadLabels()
 
-    for i in range(int(train_examples/batchSize)):
-        train_img_batch = extractBatch(trainsetDir, image_name_list, i*batchSize)
-        train_labels, test_labels = loadLabels()
-        train_label_batch = extractLabelBatch(train_labels, i*batchSize)
-        #model.train_on_batch(train_img_batch, train_label_batch)
-        model.fit(train_img_batch, train_label_batch)
-        #print("Batch " + str(i+1))
-
-
+    for k in range(epochs):
+        print("Epoch ---> " + str(k + 1))
+        for i in range(int(train_examples/batchSize)):
+            train_img_batch = extractBatch(trainsetDir, image_name_list, i*batchSize)
+            train_label_batch = extractLabelBatch(train_labels, i*batchSize)
+            #model.fit(train_img_batch, train_label_batch, verbose=2)
+            loss, acc = model.train_on_batch(train_img_batch, train_label_batch)
+            print('loss: ' + str(loss) + ', acc: ' + str(acc))
 #Model
 model = Sequential()
 model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
@@ -126,20 +109,33 @@ model.add(Dense(2, activation='sigmoid'))
 model.summary()
 
 
-#Compile model
-def custom_mse(y_true, y_pred):
+
+#Custom loss function, euclidean distance between normalized coordinates
+def custom_loss(y_true, y_pred):
     return K.mean(K.sqrt(K.square(y_true[:][0] - y_pred[:][0]) + K.square(y_true[:][1] - y_pred[:][1])))
 
-model.compile(loss=custom_mse, optimizer='rmsprop', metrics=['accuracy'])
+#Custom accuracy
+def custom_accuracy(y_true, y_pred):
+    x_thresh = K.variable(value=0.0968141592920358, dtype='float32', name='xtr')
+    y_thresh = K.variable(value=0.05829173599556346, dtype='float32', name='ytr')
+
+    x_diff = y_true[:][0] - y_pred[:][0]
+    y_diff = y_true[:][1] - y_pred[:][1]
+
+    j = 0
+    for i in range(batchSize):
+        if(K.eval(K.less(x_diff[i], x_thresh))):
+            if(K.eval(K.less(y_diff[i], y_thresh))):
+                j += 1
+    #print(j/batchSize)
+    return K.variable(value=(j/batchSize), dtype='float32')
+
+#Compile model
+model.compile(loss='mse', optimizer='rmsprop', metrics=['accuracy'])
 
 
-startTraining()
 #Training
-# model.fit_generator(generateTrainingExamples(trainsetDir),
-#                     epochs=epochs,
-#                     validation_data=generateTestExamples(testsetDir),
-#                     steps_per_epoch=train_examples//batchSize,
-#                     validation_steps=test_examples//batchSize)
+startTraining()
 
 
 '''

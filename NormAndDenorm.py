@@ -26,6 +26,8 @@ def serializeNorm(xy, str):
 
 
 def findMinMaxCoord(trainlabels, testlabels):
+    minX = minY = 999.0
+    maxX = maxY = 0.0
     for x, y in trainlabels:
         if x < minX:
             minX = x
@@ -49,20 +51,21 @@ def findMinMaxCoord(trainlabels, testlabels):
     # print(str(minX) + ', ' + str(maxX) + ', ' + str(minY) + ', ' + str(maxY))
     return minX, minY, maxX, maxY
 
-
+'''
 # Open the lbl files
 with open('train_labels.lbl', 'rb') as fa:
     trainlabels = pickle.load(fa)
 with open('test_labels.lbl', 'rb') as fe:
     testlabels = pickle.load(fe)
-
+'''
 # Get coordinate bounds
-minX, minY, maxX, maxY = findMinMaxCoord(trainlabels, testlabels)
+#minX, minY, maxX, maxY = findMinMaxCoord(trainlabels, testlabels)
 
 # Serialization into files
-serializeNorm(trainlabels, 'trainNorm', minX, minY, maxX, maxY)
-serializeNorm(testlabels, 'testNorm', minX, minY, maxX, maxY)
+#serializeNorm(trainlabels, 'trainNorm', minX, minY, maxX, maxY)
+#serializeNorm(testlabels, 'testNorm', minX, minY, maxX, maxY)
 
+'''
 # Check prints
 with open('trainNorm.lbl', 'rb') as f:
     f = pickle.load(f)
@@ -72,3 +75,27 @@ with open('testNorm.lbl', 'rb') as f:
     f = pickle.load(f)
     for i in range(len(f)):
         print(str(f[i]))
+'''
+
+with open('train_labels.lbl', 'rb') as fa:
+    trainlabels = pickle.load(fa)
+with open('test_labels.lbl', 'rb') as fe:
+    testlabels = pickle.load(fe)
+
+minimumX, minimumY, maximumX, maximumY = findMinMaxCoord(trainlabels, testlabels)
+
+diffX = maximumX - minimumX
+diffY = maximumY - minimumY
+normalizedLongitude = 0.005470 / diffX
+normalizedLatitude = 0.006306 / diffY
+
+print("minX : " + str(minimumX))
+print("maxX : " + str(maximumX))
+print("minY : " + str(minimumY))
+print("maxY : " + str(maximumY))
+
+print("diffX : " + str(diffX))
+print("diffY : " + str(diffY))
+
+print("longitude (X): " + str(normalizedLongitude))
+print("latitude (Y): " + str(normalizedLatitude))
