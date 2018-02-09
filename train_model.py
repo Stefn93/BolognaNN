@@ -127,31 +127,8 @@ model.summary()
 
 
 #Compile model
-def custom_mse(y_true,y_pred):
-
-    y_true_x = []
-    y_true_y = []
-    y_pred_x = []
-    y_pred_y = []
-    y_calc_x = np.zeros(batchSize)
-    y_calc_y = np.zeros(batchSize)
-
-    print(y_true.shape)
-    print(y_pred.shape)
-    for i in range(batchSize):
-        y_true_x.append(y_true[i][0])
-        y_true_y.append(y_true[i][1])
-
-        y_pred_x.append(y_pred[i][0])
-        y_pred_y.append(y_pred[i][1])
-
-        y_calc_x[i] = y_true_x[i] - y_pred_x[i]
-        y_calc_y[i] = y_true_y[i] - y_pred_y[i]
-
-    res_x = K.mean(y_calc_x)
-    res_y = K.mean(y_calc_y)
-
-    return K.sqrt(K.square(res_x) + K.square(res_y))
+def custom_mse(y_true, y_pred):
+    return K.mean(K.sqrt(K.square(y_true[:][0] - y_pred[:][0]) + K.square(y_true[:][1] - y_pred[:][1])))
 
 model.compile(loss=custom_mse, optimizer='rmsprop', metrics=['accuracy'])
 
