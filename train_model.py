@@ -89,8 +89,8 @@ def custom_loss(y_true, y_pred):
 
 #Custom accuracy
 def custom_accuracy(y_true, y_pred):
-    x_thresh = K.variable(value=0.0968141592920358, dtype='float32', name='xtr')
-    y_thresh = K.variable(value=0.05829173599556346, dtype='float32', name='ytr')
+    x_thresh = 0.0968141592920358
+    y_thresh = 0.05829173599556346
 
     x_diff = y_true[:][0] - y_pred[:][0]
     y_diff = y_true[:][1] - y_pred[:][1]
@@ -100,8 +100,18 @@ def custom_accuracy(y_true, y_pred):
         if(K.eval(K.less(x_diff[i], x_thresh))):
             if(K.eval(K.less(y_diff[i], y_thresh))):
                 j += 1
-    #print(j/batchSize)
     return K.variable(value=(j/batchSize), dtype='float32')
+
+def accuracy_with_threshold(y_true, y_pred):
+    x_thresh = 0.0968141592920358
+    y_thresh = 0.05829173599556346
+    pred_x = y_pred[:][0]
+    pred_y = y_pred[:][1]
+    true_x = y_true[:][0]
+    true_y = y_true[:][1]
+    pred_x = K.cast(K.less(true_x - pred_x, x_thresh), K.floatx())
+    pred_y = K.cast(K.less(true_y - pred_y, y_thresh), K.floatx())
+    return K.mean(K.equal(y_true, pred_y + pred_x))
 
 #Model
 model = Sequential()
@@ -121,7 +131,7 @@ model.summary()
 
 
 #Compile model
-model.compile(loss=custom_loss, optimizer='rmsprop', metrics=['accuracy'])
+model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[accuracy_with_threshold])
 
 
 #Training
