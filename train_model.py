@@ -105,13 +105,9 @@ def custom_accuracy(y_true, y_pred):
 def accuracy_with_threshold(y_true, y_pred):
     x_thresh = 0.0968141592920358
     y_thresh = 0.05829173599556346
-    pred_x = y_pred[:][0]
-    pred_y = y_pred[:][1]
-    true_x = y_true[:][0]
-    true_y = y_true[:][1]
-    pred_x = K.cast(K.less(true_x - pred_x, x_thresh), K.floatx())
-    pred_y = K.cast(K.less(true_y - pred_y, y_thresh), K.floatx())
-    return K.mean(K.equal(y_true, pred_y + pred_x))
+    y = tf.select(K.less(y_true[0] - y_pred[0], x_thresh), x_thresh * K.ones_like(y_pred[0]), y_pred)
+    #z = tf.select(K.less(y, -100000), -1000000. * K.ones_like(x), y)
+    return K.mean(K.equal(y_true, y_pred))
 
 #Model
 model = Sequential()
