@@ -85,23 +85,25 @@ def custom_loss(y_true, y_pred):
     x_diff_square = K.square(x_diff)
     y_diff_square = K.square(y_diff)
     xy_sum = x_diff_square + y_diff_square
-    return K.sum(K.sqrt(xy_sum))
+    return K.mean(K.sqrt(xy_sum))
 
 #Custom accuracy
 def custom_accuracy(y_true, y_pred):
-    x_thresh = K.variable(value=0.0968141592920358, dtype='float32', name='xtr')
-    y_thresh = K.variable(value=0.05829173599556346, dtype='float32', name='ytr')
+    batchSize_tensor = tf.fill([1,1], batchSize)
+    x_thresh = tf.fill([batchSize, 1], 0.0968141592920358)
+    y_thresh = tf.fill([batchSize, 1], 0.05829173599556346)
 
     x_diff = y_true[:][0] - y_pred[:][0]
     y_diff = y_true[:][1] - y_pred[:][1]
 
-    j = 0
-    for i in range(batchSize):
-        if(K.eval(K.less(x_diff[i], x_thresh))):
-            if(K.eval(K.less(y_diff[i], y_thresh))):
-                j += 1
-    #print(j/batchSize)
-    return K.variable(value=(j/batchSize), dtype='float32')
+    x_bool = tf.less(x_diff, x_thresh)
+    y_bool = tf.less(y_diff, y_thresh)
+
+    xy_bool = tf.logical_and(x_bool, y_bool)
+    n_valid_points = tf.reduce_sum(tf.to_int32(xy_bool))
+    res = tf.divide(n_valid_points, batchSize_tensor)
+    return res
+
 
 #Model
 model = Sequential()
@@ -121,7 +123,7 @@ model.summary()
 
 
 #Compile model
-model.compile(loss=custom_loss, optimizer='rmsprop', metrics=['accuracy'])
+model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
 
 
 #Training
