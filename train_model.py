@@ -39,8 +39,7 @@ def orderedList(folderPath):
 
 def extractBatch(dataFolder, data_names):
     img_batch = []
-    i = 0
-    k = 0
+
     for image in data_names:
             img = np.asarray(Image.open(dataFolder+image))
             img_batch.append(img)
@@ -89,12 +88,13 @@ def custom_loss(y_true, y_pred):
 
 #Custom accuracy
 def custom_accuracy(y_true, y_pred):
+    size_tensor = tf.divide(tf.size(y_true), tf.fill([1,1], 2))
     batchSize_tensor = tf.fill([1,1], batchSize)
     x_thresh = tf.fill([batchSize, 1], 0.0968141592920358)
     y_thresh = tf.fill([batchSize, 1], 0.05829173599556346)
 
-    x_diff = y_true[:][0] - y_pred[:][0]
-    y_diff = y_true[:][1] - y_pred[:][1]
+    x_diff = tf.sqrt(tf.square(tf.subtract(y_true[:][0], y_pred[:][0])))
+    y_diff = tf.sqrt(tf.square(tf.subtract(y_true[:][1], y_pred[:][1])))
 
     x_bool = tf.less(x_diff, x_thresh)
     y_bool = tf.less(y_diff, y_thresh)
@@ -104,7 +104,7 @@ def custom_accuracy(y_true, y_pred):
     res = tf.divide(n_valid_points, batchSize_tensor)
     return res
 
-
+'''
 #Model
 model = Sequential()
 model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
@@ -117,6 +117,22 @@ model.add(Dropout(0.5))
 model.add(Dense(128, activation='elu', kernel_initializer='he_normal'))
 model.add(Dense(32, activation='elu', kernel_initializer='he_normal'))
 model.add(Dense(2, activation='sigmoid'))
+'''
+
+#base model
+base_model = DenseNet121(input_shape=(300, 300, 3), weights='imagenet', include_top=False)
+
+# Top Model Block
+x = base_model.output
+x = GlobalAveragePooling2D()(x)
+x = Dense(256, activation='relu')(x)
+x = Dense(64, activation='relu')(x)
+predictions = Dense(2, activation='sigmoid')(x)
+
+model = Model(base_model.input, predictions)
+
+for layer in base_model.layers:
+    layer.trainable = False
 
 #Summary
 model.summary()
@@ -131,7 +147,7 @@ image_name_list_train = orderedList(trainsetDir)
 image_name_list_test = orderedList(testsetDir)
 train_labels, test_labels = loadLabels()
 
-def dataGenerator(dir, img_names, labelFile, batch_size):
+def dataGenerator(dir, img_names, labels, batch_size):
     L = len(img_names)
 
     #this line is just to make the generator infinite, keras needs that
@@ -142,7 +158,7 @@ def dataGenerator(dir, img_names, labelFile, batch_size):
         while batch_start < L:
             limit = min(batch_end, L)
             X = extractBatch(dir, img_names[batch_start:limit])
-            Y = extractLabelBatch(labelFile, batch_start, limit)
+            Y = extractLabelBatch(labels, batch_start, limit)
 
             yield (X,Y)
 
@@ -154,7 +170,7 @@ model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labe
                     validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
                     steps_per_epoch=train_examples//batchSize,
                     validation_steps=test_examples//batchSize,
-                    epochs=1)
+                    epochs=2)
 '''
 # serialize model to YAML
 model_yaml = model.to_yaml()
