@@ -88,7 +88,6 @@ def custom_loss(y_true, y_pred):
 
 #Custom accuracy
 def custom_accuracy(y_true, y_pred):
-    size_tensor = tf.divide(tf.size(y_true), tf.fill([1,1], 2))
     batchSize_tensor = tf.fill([1,1], batchSize)
     x_thresh = tf.fill([batchSize, 1], 0.0968141592920358)
     y_thresh = tf.fill([batchSize, 1], 0.05829173599556346)
@@ -104,35 +103,60 @@ def custom_accuracy(y_true, y_pred):
     res = tf.divide(n_valid_points, batchSize_tensor)
     return res
 
-'''
+
 #Model
 model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(5,5), activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(3,3), activation="elu", kernel_initializer='he_normal'))
 model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='he_normal'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
 model.add(Conv2D(filters=32, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
 model.add(Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
 model.add(Flatten())
 model.add(Dropout(0.5))
-model.add(Dense(128, activation='elu', kernel_initializer='he_normal'))
-model.add(Dense(32, activation='elu', kernel_initializer='he_normal'))
+model.add(Dense(256, activation='elu', kernel_initializer='he_normal'))
+model.add(Dense(64, activation='elu', kernel_initializer='he_normal'))
 model.add(Dense(2, activation='sigmoid'))
+
 '''
+input_shape = Input(shape=(160,150,3))
 
-#base model
-base_model = DenseNet121(input_shape=(300, 300, 3), weights='imagenet', include_top=False)
+def high_features(input_shape):
+    conv1 = Conv2D(filters=16, kernel_size=(5, 5), strides=(5, 5), activation="elu",
+                  kernel_initializer='he_normal')(input_shape)
+    conv2 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
+                   kernel_initializer='he_normal')(conv1)
+    conv_flat = Flatten()(conv2)
+    return conv_flat
 
-# Top Model Block
-x = base_model.output
-x = GlobalAveragePooling2D()(x)
-x = Dense(256, activation='relu')(x)
-x = Dense(64, activation='relu')(x)
-predictions = Dense(2, activation='sigmoid')(x)
+def mid_features(input_shape):
+    conv1 = Conv2D(filters=16, kernel_size=(3, 3), strides=(3, 3), activation="elu",
+                  kernel_initializer='he_normal')(input_shape)
+    conv2 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
+                   kernel_initializer='he_normal')(conv1)
+    conv_flat = Flatten()(conv2)
+    return conv_flat
 
-model = Model(base_model.input, predictions)
+def low_features(input_shape):
+    conv1 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
+                  kernel_initializer='he_normal')(input_shape)
+    conv2 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
+                   kernel_initializer='he_normal')(conv1)
+    conv_flat = Flatten()(conv2)
+    return conv_flat
 
-for layer in base_model.layers:
-    layer.trainable = False
+conv1 = high_features(input_shape)
+conv2 = mid_features(input_shape)
+conv3 = low_features(input_shape)
+merged = concatenate([conv1, conv2, conv3])
+pool1 = MaxPooling2D(pool_size=(2, 2), strides=2)(merged)
+conv4 = Conv2D(filters=32, kernel_size=(2,2), strides=(2,2), activation="elu", kernel_initializer='he_normal')(pool1)
+flat1 = Flatten()(conv4)
+drop1 = Dropout(0.5)(flat1)
+dense1 = Dense(128, activation='elu', kernel_initializer='he_normal')(drop1)
+final = Dense(num_classes, activation='sigmoid')(dense1)
+
+model = Model(input=input_shape, output=final)
+'''
 
 #Summary
 model.summary()
@@ -170,7 +194,7 @@ model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labe
                     validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
                     steps_per_epoch=train_examples//batchSize,
                     validation_steps=test_examples//batchSize,
-                    epochs=2)
+                    epochs=10)
 '''
 # serialize model to YAML
 model_yaml = model.to_yaml()
