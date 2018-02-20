@@ -1,17 +1,15 @@
-
 from __future__ import print_function
-import h5py
-from keras.preprocessing.image import ImageDataGenerator
-from keras.models import *
-from keras.layers import *
-from keras.optimizers import *
-from keras.applications import *
+
+import os
+import pickle
+
+import keras
 import keras.backend as K
 import numpy as np
-import pickle
-from PIL import Image
-import os
 import tensorflow as tf
+from PIL import Image
+from keras.layers import *
+from keras.models import *
 
 model_name = 'Bologna_Zones_Model'
 dataset = 'bologna_dataset_sparse'
@@ -19,7 +17,7 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 
 batchSize = 32
-epochs = 1
+epochs = 5
 num_classes = 2
 train_examples = 27715
 test_examples = 6928
@@ -77,16 +75,18 @@ def loadLabels():
 
     return train_labels, test_labels
 
-#Custom loss function, euclidean distance between normalized coordinates
+
+# Custom loss function, euclidean distance between normalized coordinates
 def custom_loss(y_true, y_pred):
     x_diff = y_true[:][0] - y_pred[:][0]
     y_diff = y_true[:][1] - y_pred[:][1]
     x_diff_square = K.square(x_diff)
     y_diff_square = K.square(y_diff)
     xy_sum = x_diff_square + y_diff_square
-    return K.mean(K.sqrt(xy_sum))
+    return K.sum(K.sqrt(xy_sum))
 
-#Custom accuracy
+
+# Custom accuracy
 def custom_accuracy(y_true, y_pred):
     batchSize_tensor = tf.fill([1,1], batchSize)
     x_thresh = tf.fill([batchSize, 1], 0.0968141592920358)
@@ -104,13 +104,33 @@ def custom_accuracy(y_true, y_pred):
     return res
 
 
-#Model
+def dataGenerator(dir, img_names, labels, batch_size):
+    L = len(img_names)
+
+    # this line is just to make the generator infinite, keras needs that
+    while True:
+        batch_start = 0
+        batch_end = batch_size
+
+        while batch_end < L:
+            limit = min(batch_end, L)
+            X = extractBatch(dir, img_names[batch_start:limit])
+            Y = extractLabelBatch(labels, batch_start, limit)
+
+            yield (X, Y)
+
+            batch_start += batch_size
+            batch_end += batch_size
+
+
+# Model
 model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5,5), strides=(3,3), activation="elu", kernel_initializer='he_normal'))
-model.add(Conv2D(filters=24, kernel_size=(3,3), strides=(3,3),activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5, 5), strides=(3, 3), activation="elu",
+                 kernel_initializer='he_normal'))
+model.add(Conv2D(filters=24, kernel_size=(3, 3), strides=(3, 3), activation="elu", kernel_initializer='he_normal'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
-model.add(Conv2D(filters=32, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
-model.add(Conv2D(filters=64, kernel_size=(2,2), strides=(2,2),activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(filters=32, kernel_size=(2, 2), strides=(2, 2), activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation="elu", kernel_initializer='he_normal'))
 model.add(Flatten())
 model.add(Dropout(0.5))
 model.add(Dense(256, activation='elu', kernel_initializer='he_normal'))
@@ -163,38 +183,78 @@ model.summary()
 
 
 #Compile model
-model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
+# model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
+model.compile(loss=custom_loss, optimizer='rmsprop')
 
 
-#Training
+def calcAcc(dir, img_names, labels):
+    l = len(img_names)
+    batch_start = 0
+    batch_end = batchSize
+    acc = 0
+    tot_acc = 0
+
+    while batch_end < l:
+        limit = min(batch_end, l)
+        x_thresh = 0.0968141592920358
+        y_thresh = 0.05829173599556346
+
+        X = extractBatch(dir, img_names[batch_start:limit])
+        Y = extractLabelBatch(labels, batch_start, limit)
+
+        pred = model.predict(X, batchSize)
+        for i in range(batchSize):
+            if pred[i][0] - Y[i][0] < x_thresh and pred[i][1] - Y[i][1] < y_thresh:
+                acc += 1
+            tot_acc += 1
+            print('predizione: ' + str(pred[i]) + ' , truth: ' + str(Y[i]))
+
+        print('Accuracy: ' + str((acc/tot_acc)*100) + '%\n')
+        batch_start += batchSize
+        batch_end += batchSize
+
+    return 'Accuracy: ' + str((acc/tot_acc)*100) + '%\n'
+
+class Histories(keras.callbacks.Callback):
+    dir = ''
+    img_names = ()
+    labels = ()
+    train_res = []
+    test_res = []
+
+    def init_names(self, dir, img_names, labels):
+        self.dir = dir
+        self.img_names = img_names
+        self.labels = labels
+
+    def on_epoch_end(self, epochs, logs={}):
+        if self.dir == trainsetDir:
+            self.train_res.append(calcAcc(self.dir, self.img_names, self.labels))
+        elif self.dir == testsetDir:
+            self.test_res.append(calcAcc(self.dir, self.img_names, self.labels))
+        return
+
+
+# Training
 image_name_list_train = orderedList(trainsetDir)
 image_name_list_test = orderedList(testsetDir)
 train_labels, test_labels = loadLabels()
 
-def dataGenerator(dir, img_names, labels, batch_size):
-    L = len(img_names)
-
-    #this line is just to make the generator infinite, keras needs that
-    while True:
-        batch_start = 0
-        batch_end = batch_size
-
-        while batch_start < L:
-            limit = min(batch_end, L)
-            X = extractBatch(dir, img_names[batch_start:limit])
-            Y = extractLabelBatch(labels, batch_start, limit)
-
-            yield (X,Y)
-
-            batch_start += batch_size
-            batch_end += batch_size
+history = Histories()
+history.init_names(trainsetDir, image_name_list_train, train_labels)
+#Histories.init_names(Histories, testsetDir, image_name_list_test, test_labels)
 
 
 model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labels, batchSize),
                     validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
                     steps_per_epoch=train_examples//batchSize,
                     validation_steps=test_examples//batchSize,
-                    epochs=10)
+                    epochs=epochs,
+                    callbacks=[history])
+
+print(history.train_res)
+
+
 '''
 # serialize model to YAML
 model_yaml = model.to_yaml()
