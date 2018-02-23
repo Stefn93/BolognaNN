@@ -135,7 +135,8 @@ model.add(Flatten())
 model.add(Dropout(0.5))
 model.add(Dense(256, activation='elu', kernel_initializer='he_normal'))
 model.add(Dense(64, activation='elu', kernel_initializer='he_normal'))
-model.add(Dense(2, activation='sigmoid'))
+# model.add(Activation('sigmoid'))
+model.add(Dense(2))
 
 '''
 input_shape = Input(shape=(160,150,3))
@@ -184,7 +185,7 @@ model.summary()
 
 #Compile model
 # model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
-model.compile(loss=custom_loss, optimizer='rmsprop')
+model.compile(loss="mean_squared_error", optimizer='rmsprop')
 
 
 def calcAcc(dir, img_names, labels):
@@ -203,8 +204,9 @@ def calcAcc(dir, img_names, labels):
         Y = extractLabelBatch(labels, batch_start, limit)
 
         pred = model.predict(X, batchSize)
+        # print('Pred: ' + str(pred) + ', shape: ' + str(pred.shape))
         for i in range(batchSize):
-            if pred[i][0] - Y[i][0] < x_thresh and pred[i][1] - Y[i][1] < y_thresh:
+            if abs(pred[i][0] - Y[i][0]) < x_thresh and abs(pred[i][1] - Y[i][1]) < y_thresh:
                 acc += 1
             tot_acc += 1
             print('predizione: ' + str(pred[i]) + ' , truth: ' + str(Y[i]))
