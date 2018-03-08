@@ -124,17 +124,17 @@ def dataGenerator(dir, img_names, labels, batch_size):
 
 
 # Model
+init = keras.initializers.random_uniform(minval=0.0, maxval=1.0)
 model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=16, kernel_size=(5, 5), strides=(3, 3), activation="elu",
-                 kernel_initializer='he_normal'))
-model.add(Conv2D(filters=24, kernel_size=(3, 3), strides=(3, 3), activation="elu", kernel_initializer='he_normal'))
-model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
-model.add(Conv2D(filters=32, kernel_size=(2, 2), strides=(2, 2), activation="elu", kernel_initializer='he_normal'))
-model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation="elu", kernel_initializer='he_normal'))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=32, kernel_size=(2, 2), strides=(3, 3), activation='sigmoid'))
+# model.add(Conv2D(filters=24, kernel_size=(3, 3), strides=(3, 3), activation="elu", kernel_initializer='he_normal'))
+# model.add(MaxPooling2D(pool_size=(2, 2), strides=2))
+# model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), kernel_initializer=init))
+# model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation="elu", kernel_initializer='he_normal'))
 model.add(Flatten())
-model.add(Dropout(0.5))
-model.add(Dense(256, activation='elu', kernel_initializer='he_normal'))
-model.add(Dense(64, activation='elu', kernel_initializer='he_normal'))
+# model.add(Dropout(0.3))
+model.add(Dense(32))
+# model.add(Dense(12, activation='elu', kernel_initializer='he_normal'))
 # model.add(Activation('sigmoid'))
 model.add(Dense(2))
 
