@@ -1,11 +1,8 @@
 from __future__ import print_function
 
-import os
 import pickle
 
 import keras
-import keras.backend as K
-import numpy as np
 import tensorflow as tf
 from PIL import Image
 from keras.layers import *
@@ -17,7 +14,7 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 
 batchSize = 32
-epochs = 5
+epochs = 10
 num_classes = 2
 train_examples = 27715
 test_examples = 6928
@@ -88,7 +85,7 @@ def custom_loss(y_true, y_pred):
 
 # Custom accuracy
 def custom_accuracy(y_true, y_pred):
-    batchSize_tensor = tf.fill([1,1], batchSize)
+    batchSize_tensor = tf.fill([1, 1], batchSize)
     x_thresh = tf.fill([batchSize, 1], 0.0968141592920358)
     y_thresh = tf.fill([batchSize, 1], 0.05829173599556346)
 
@@ -125,13 +122,11 @@ def dataGenerator(dir, img_names, labels, batch_size):
 
 # Model
 model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=32, kernel_size=(5, 5), strides=(5, 5), activation='sigmoid'))
-model.add(Conv2D(filters=24, kernel_size=(3, 3), strides=(3, 3)))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=32, kernel_size=(4, 4), strides=(2, 2)))
+model.add(Conv2D(filters=24, kernel_size=(3, 3), strides=(2, 2)))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2)))
 model.add(Flatten())
-model.add(Dense(256))
-model.add(Dropout(0.5))
 model.add(Dense(32))
 model.add(Dropout(0.5))
 # model.add(Activation('sigmoid'))
@@ -181,10 +176,9 @@ model = Model(input=input_shape, output=final)
 #Summary
 model.summary()
 
-
 #Compile model
-# model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
-model.compile(loss="mean_squared_error", optimizer='rmsprop')
+model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
+#model.compile(loss="mean_squared_error", optimizer='rmsprop')
 
 
 def calcAcc(dir, img_names, labels):
