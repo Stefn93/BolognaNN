@@ -14,7 +14,7 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 
 batchSize = 32
-epochs = 10
+epochs = 25
 num_classes = 2
 train_examples = 27715
 test_examples = 6928
@@ -132,52 +132,12 @@ model.add(Dropout(0.5))
 # model.add(Activation('sigmoid'))
 model.add(Dense(2))
 
-'''
-input_shape = Input(shape=(160,150,3))
-
-def high_features(input_shape):
-    conv1 = Conv2D(filters=16, kernel_size=(5, 5), strides=(5, 5), activation="elu",
-                  kernel_initializer='he_normal')(input_shape)
-    conv2 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
-                   kernel_initializer='he_normal')(conv1)
-    conv_flat = Flatten()(conv2)
-    return conv_flat
-
-def mid_features(input_shape):
-    conv1 = Conv2D(filters=16, kernel_size=(3, 3), strides=(3, 3), activation="elu",
-                  kernel_initializer='he_normal')(input_shape)
-    conv2 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
-                   kernel_initializer='he_normal')(conv1)
-    conv_flat = Flatten()(conv2)
-    return conv_flat
-
-def low_features(input_shape):
-    conv1 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
-                  kernel_initializer='he_normal')(input_shape)
-    conv2 = Conv2D(filters=16, kernel_size=(2, 2), strides=(2, 2), activation="elu",
-                   kernel_initializer='he_normal')(conv1)
-    conv_flat = Flatten()(conv2)
-    return conv_flat
-
-conv1 = high_features(input_shape)
-conv2 = mid_features(input_shape)
-conv3 = low_features(input_shape)
-merged = concatenate([conv1, conv2, conv3])
-pool1 = MaxPooling2D(pool_size=(2, 2), strides=2)(merged)
-conv4 = Conv2D(filters=32, kernel_size=(2,2), strides=(2,2), activation="elu", kernel_initializer='he_normal')(pool1)
-flat1 = Flatten()(conv4)
-drop1 = Dropout(0.5)(flat1)
-dense1 = Dense(128, activation='elu', kernel_initializer='he_normal')(drop1)
-final = Dense(num_classes, activation='sigmoid')(dense1)
-
-model = Model(input=input_shape, output=final)
-'''
-
 #Summary
 model.summary()
 
 #Compile model
-model.compile(loss=custom_loss, optimizer='rmsprop', metrics=[custom_accuracy])
+opt = optimizers.RMSprop(lr=0.001)
+model.compile(loss='mse', optimizer=opt, metrics=[custom_accuracy])
 #model.compile(loss="mean_squared_error", optimizer='rmsprop')
 
 
@@ -210,6 +170,7 @@ def calcAcc(dir, img_names, labels):
 
     return 'Accuracy: ' + str((acc/tot_acc)*100) + '%\n'
 
+
 class Histories(keras.callbacks.Callback):
     dir = ''
     img_names = ()
@@ -237,7 +198,7 @@ train_labels, test_labels = loadLabels()
 
 history = Histories()
 history.init_names(trainsetDir, image_name_list_train, train_labels)
-#Histories.init_names(Histories, testsetDir, image_name_list_test, test_labels)
+history.init_names(testsetDir, image_name_list_test, test_labels)
 
 
 model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labels, batchSize),
@@ -248,6 +209,7 @@ model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labe
                     callbacks=[history])
 
 print(history.train_res)
+print(history.test_res)
 
 
 '''
