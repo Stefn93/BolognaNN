@@ -7,6 +7,7 @@ import tensorflow as tf
 from PIL import Image
 from keras.layers import *
 from keras.models import *
+import keras.callbacks
 
 model_name = 'Bologna_Zones_Model'
 dataset = 'bologna_dataset_sparse'
@@ -14,7 +15,7 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 
 batchSize = 32
-epochs = 25
+epochs = 40
 num_classes = 2
 train_examples = 27715
 test_examples = 6928
@@ -168,7 +169,7 @@ def calcAcc(dir, img_names, labels):
         batch_start += batchSize
         batch_end += batchSize
 
-    return 'Accuracy: ' + str((acc/tot_acc)*100) + '%\n'
+    return str((acc/tot_acc)*100)
 
 
 class Histories(keras.callbacks.Callback):
@@ -200,17 +201,17 @@ history = Histories()
 history.init_names(trainsetDir, image_name_list_train, train_labels)
 history.init_names(testsetDir, image_name_list_test, test_labels)
 
+save = keras.callbacks.ModelCheckpoint('models/best_net-{val_custom_accuracy:.2f}.hdf5', monitor='val_custom_accuracy', verbose=0, save_best_only=True, save_weights_only=False, mode='max', period=1)
 
 model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labels, batchSize),
                     validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
                     steps_per_epoch=train_examples//batchSize,
                     validation_steps=test_examples//batchSize,
                     epochs=epochs,
-                    callbacks=[history])
+                    callbacks=[history, save])
 
 print(history.train_res)
 print(history.test_res)
-
 
 '''
 # serialize model to YAML
