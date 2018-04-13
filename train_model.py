@@ -22,13 +22,31 @@ train_examples = 27715
 test_examples = 6928
 glob_acc = 0.0
 
-
-
 def getint(name):
     basename = name.partition('.')
     parts = name.partition('_')
     return int(parts[0])
 
+def getTrainSet(dirName):
+    img_list = []
+    lbl_list = []
+    files = os.listdir(dirName)
+    shuffle(files)
+    print(len(files))
+    for f in files[:256]:
+        #print(getLabel(f))
+        lbl_list.append(getLabel(f))
+        img = np.asarray(Image.open(dirName + f))
+        img_list.append(img)
+    lbl_array = np.array(lbl_list)
+    lbl_min_x= np.min(lbl_array[:, 0])
+    lbl_max_x = np.max(lbl_array[:, 0])
+    lbl_min_y = np.min(lbl_array[:, 1])
+    lbl_max_y = np.max(lbl_array[:, 1])
+    lbl_array[:, 0] = (lbl_array[:, 0] - lbl_min_x) / (lbl_max_x - lbl_min_x)
+    lbl_array[:, 1] = (lbl_array[:, 1] - lbl_min_y) / (lbl_max_y - lbl_min_y)
+    print(lbl_array[0:50])
+    return np.array(img_list), np.array(lbl_list)
 
 def orderedList(folderPath):
     files = os.listdir(folderPath)
@@ -85,7 +103,7 @@ def getLabel(image_name):
     image_name = image_name.split('_')
     x = float(image_name[1].replace('X', ""))
     y = float(image_name[2].replace('Y', ""))
-    coord = [x,y]
+    coord = [x, y]
     return coord
 
 # Custom loss function, euclidean distance between normalized coordinates
@@ -143,16 +161,16 @@ model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3)))
 model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2)))
 model.add(Flatten())
-model.add(Dense(32))
+model.add(Dense(32, activation='relu'))
 model.add(Dropout(0.5))
-# model.add(Activation('sigmoid'))
-model.add(Dense(2))
+model.add(Dense(2, activation='sigmoid'))
+
 
 #Summary
 model.summary()
 
 #Compile model
-opt = optimizers.RMSprop(lr=0.001, decay=0.0001)
+opt = optimizers.Adam(lr=0.0001, decay=0.0001)
 model.compile(loss='mse', optimizer=opt, metrics=[custom_accuracy])
 #model.compile(loss="mean_squared_error", optimizer='rmsprop')
 
@@ -170,32 +188,36 @@ def calcAcc(dir, img_names, labels):
         y_thresh = 0.05829173599556346
 
         X = extractBatch(dir, img_names[batch_start:limit])
-        #Y = extractLabelBatch(labels, batch_start, limit)
+        Y = extractLabelBatch(labels, batch_start, limit)
+
+        print("shape: " + str(Y.shape))
+        print("media asse 1: " + str(np.mean(Y[:, 0])))
+        print("media asse 2: " + str(np.mean(Y[:, 1])))
 
         pred = model.predict(X, batchSize)
         # print('Pred: ' + str(pred) + ', shape: ' + str(pred.shape))
         for i in range(batchSize):
-            real_coords = getLabel(X[i])
-            if abs(pred[i][0] - real_coords[0]) < x_thresh and abs(pred[i][1] - real_coords[1]) < y_thresh:
+            #0eal_coords = getLabel(X[i])
+            if abs(pred[i][0] - Y[i][0]) < x_thresh and abs(pred[i][1] - Y[i][1]) < y_thresh:
                 acc += 1
             tot_acc += 1
-            print('predizione: ' + str(pred[i]) + ' , truth: ' + str(real_coords))
+            print('predizione: ' + str(pred[i]) + ' , truth: ' + str(Y[i]))
 
         glob_acc = round(((acc/tot_acc)*100), 2)
         print('Accuracy: ' + str(glob_acc) + '%\n')
         batch_start += batchSize
         batch_end += batchSize
 
-    files = os.listdir('models')
-    if (len(files) > 0):
-        for file in files:
-            s = re.sub("bestnet", "", file)
-            s = re.sub("\.h5", "", s)
-            if(glob_acc > float(s)):
-                model.save_weights("models/bestnet" + str(glob_acc) + ".h5")
-                os.remove("models/"+file)
-    else:
-        model.save_weights("models/bestnet" + str(glob_acc) + ".h5")
+    # files = os.listdir('models')
+    # if (len(files) > 0):
+    #     for file in files:
+    #         s = re.sub("bestnet", "", file)
+    #         s = re.sub("\.h5", "", s)
+    #         if(glob_acc > float(s)):
+    #             model.save_weights("models/bestnet" + str(glob_acc) + ".h5")
+    #             os.remove("models/"+file)
+    # else:
+    #     model.save_weights("models/bestnet" + str(glob_acc) + ".h5")
 
     return str((acc/tot_acc)*100)
 
@@ -218,14 +240,17 @@ class Histories(keras.callbacks.Callback):
         elif self.dir == testsetDir:
             self.test_res.append(calcAcc(self.dir, self.img_names, self.labels))
 
-        image_name_list_train = shuffleList(trainsetDir)
+        #image_name_list_train = shuffleList(trainsetDir)
         return
 
 
 # Training
-image_name_list_train = shuffleList(trainsetDir)
-image_name_list_test = orderedList(testsetDir)
-train_labels, test_labels = loadLabels()
+#image_name_list_train = orderedList(trainsetDir)
+#image_name_list_test = orderedList(testsetDir)
+#train_labels, test_labels = loadLabels()
+
+image_name_list_train, train_labels = getTrainSet(trainsetDir)
+image_name_list_test, test_labels = getTrainSet(testsetDir)
 
 history = Histories()
 history.init_names(trainsetDir, image_name_list_train, train_labels)
@@ -233,13 +258,24 @@ history.init_names(testsetDir, image_name_list_test, test_labels)
 
 #save = keras.callbacks.ModelCheckpoint('models/best_net-'+str(glob_acc)+'.hdf5', monitor=glob_acc, verbose=0, save_best_only=True, save_weights_only=False, mode='max', period=1)
 
-model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labels, batchSize),
-                    validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
-                    steps_per_epoch=train_examples//batchSize,
-                    validation_steps=test_examples//batchSize,
-                    epochs=epochs,
-                    #callbacks=[history, save])
-                    callbacks=[history])
+# model.fit_generator(dataGenerator(trainsetDir, image_name_list_train, train_labels, batchSize),
+#                     validation_data=dataGenerator(testsetDir, image_name_list_test, test_labels, batchSize),
+#                     #steps_per_epoch=train_examples//batchSize,
+#                     steps_per_epoch=10,
+#                     validation_steps=test_examples//batchSize,
+#                     epochs=epochs,
+#                     #callbacks=[history, save])
+#                     callbacks=[history])
+print("hey")
+model.fit(  image_name_list_train,
+            train_labels,
+            validation_data=(image_name_list_test, test_labels),
+            #steps_per_epoch=train_examples//batchSize,
+            steps_per_epoch=10,
+            validation_steps=test_examples//batchSize,
+            epochs=epochs,
+            #callbacks=[history, save])
+            callbacks=[history])
 
 print(history.train_res)
 print(history.test_res)
