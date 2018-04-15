@@ -14,8 +14,8 @@ testsetDir = 'bologna_test_sparse/'
 augmented_trainsetDir = 'bologna_augmented_train_sparse/'
 augmented_testsetDir = 'bologna_augmented_test_sparse/'
 
-batchSize = 128
-epochs = 20
+batchSize = 64
+epochs = 10
 num_classes = 2
 train_examples_num = len(os.listdir(augmented_trainsetDir))
 test_examples_num = len(os.listdir(augmented_testsetDir))
@@ -115,7 +115,7 @@ model.summary()
 
 # Compile model
 opt = optimizers.RMSprop(lr=0.001)
-model.compile(loss='mse', optimizer=opt)
+model.compile(loss='mse', optimizer='adadelta')
 
 
 # Training
@@ -132,28 +132,29 @@ def train_model():
         num_batches = int(train_examples_num/batchSize)
         for batch in range(0, num_batches):
             img_batch, label_batch = getBatch(augmented_trainsetDir, train_list, startIndex, endIndex)
-            model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
-            # model.train_on_batch(img_batch, label_batch)
+            #model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
+            batch_loss = model.train_on_batch(img_batch, label_batch)
             startIndex = endIndex
             endIndex = startIndex + batchSize
-            print("Batch " + str(batch + 1) + "/" + str(num_batches))
+            print("Batch " + str(batch + 1) + "/" + str(num_batches) + "    Batch loss: " + str(batch_loss))
 
-        print("Calculating predictions...")
-        # train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
+        #print("Calculating predictions on train set...")
+        #train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
+
+        print("Calculating predictions on test set...")
         test_predictions, test_labels = calculatePredictions(augmented_testsetDir, test_list, test_examples_num)
 
-        print("Calculating accuracy...")
+        print("Calculating accuracy on test set...")
         test_accuracy = custom_accuracy(test_predictions, test_labels)
+        print("Test_accuracy = " + str(test_accuracy) + "%\n")
 
         if test_accuracy > best_accuracy:
-            model.save_weights('models/best-net-epoch'+str(epoch+1)+'-acc'+str(test_accuracy)+'.h5', overwrite=True)
+            model.save_weights('models/best-net-epochs_' + str(epoch + 1) + '-acc_' + str(test_accuracy) + '.h5',
+                               overwrite=True)
             best_accuracy = test_accuracy
             print('Best model saved with accuracy: ' + str(best_accuracy) + '%')
         else:
             print('Accuracy didn\'t improve: ' + str(test_accuracy) + '% is worse than ' + str(best_accuracy) + '%')
-
-        # print("Train_accuracy = " + str(train_accuracy) + " || Test_accuracy = " + str(test_accuracy))
-        print("Test_accuracy = " + str(test_accuracy) + "%\n")
 
 
 # Calculate predictions on a set of samples (train/test)
