@@ -17,8 +17,7 @@ augmented_testsetDir = 'bologna_augmented_test_sparse/'
 batchSize = 32
 epochs = 40
 num_classes = 2
-train_examples_num = len(os.listdir(trainsetDir))
-test_examples_num = len(os.listdir(testsetDir))
+
 
 #Data augmentation, extract 2 images from each image and saves it into new folder
 def dataAugmentation(dir, newDir, num_samples):
@@ -117,31 +116,35 @@ model.compile(loss='mse', optimizer=opt)
 
 
 #Training
-def train_model():
+def train_model(trainDir, testDir):
+    train_examples_num = len(os.listdir(trainDir))
+    test_examples_num = len(os.listdir(testDir))
+
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
-        train_list = shuffleList(trainsetDir)
-        test_list = shuffleList(testsetDir)
+        train_list = shuffleList(trainDir)
+        test_list = shuffleList(testDir)
         startIndex = 0
         endIndex = batchSize
 
 
         num_batches = int(train_examples_num/batchSize)
         for batch in range(0, num_batches):
-            img_batch, label_batch = getBatch(trainsetDir, train_list, startIndex, endIndex)
+            img_batch, label_batch = getBatch(trainDir, train_list, startIndex, endIndex)
             model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
-            #model.train_on_batch(img_batch, label_batch)
             startIndex = endIndex
             endIndex = startIndex + batchSize
             print("Batch " + str(batch + 1) + "/" + str(num_batches))
 
-        print("Calculating predictions...")
-        #train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
-        test_predictions, test_labels = calculatePredictions(testsetDir, test_list, test_examples_num)
+        #print("Calculating predictions on train set...")
+        #train_predictions, train_labels = calculatePredictions(trainDir, train_list, train_examples_num)
+        print("Calculating predictions on test set...")
+        test_predictions, test_labels = calculatePredictions(testDir, test_list, test_examples_num)
 
-        print("Calculating accuracy...")
+        #print("Calculating accuracy on train set...")
         #train_accuracy = custom_accuracy(train_predictions, train_labels)
+        print("Calculating accuracy on test set...")
         test_accuracy = custom_accuracy(test_predictions, test_labels)
 
         #print("Train_accuracy = " + str(train_accuracy) + " || Test_accuracy = " + str(test_accuracy))
@@ -185,6 +188,6 @@ def custom_accuracy(predictions, real_labels):
     return accuracy
 
 
-train_model()
+train_model(augmented_trainsetDir, augmented_testsetDir)
 #dataAugmentation(trainsetDir, augmented_trainsetDir, train_examples_num)
 #dataAugmentation(testsetDir, augmented_testsetDir, test_examples_num)
