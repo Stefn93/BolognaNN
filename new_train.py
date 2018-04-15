@@ -130,7 +130,7 @@ def train_model():
         endIndex = batchSize
 
         num_batches = int(train_examples_num/batchSize)
-        for batch in range(0, num_batches):
+        for batch in range(0, 1):
             img_batch, label_batch = getBatch(augmented_trainsetDir, train_list, startIndex, endIndex)
             model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
             # model.train_on_batch(img_batch, label_batch)
@@ -146,7 +146,7 @@ def train_model():
         test_accuracy = custom_accuracy(test_predictions, test_labels)
 
         if test_accuracy > best_accuracy:
-            model.save_weights("models/best-net-acc:"+str(test_accuracy)+".h5", overwrite=True)
+            model.save_weights('models/best-net-epoch'+str(epoch+1)+'-acc'+str(test_accuracy)+'.h5', overwrite=True)
             best_accuracy = test_accuracy
             print('Best model saved with accuracy: ' + str(best_accuracy) + '%')
         else:
