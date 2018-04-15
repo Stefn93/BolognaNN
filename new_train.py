@@ -130,7 +130,7 @@ def train_model():
         endIndex = batchSize
 
         num_batches = int(train_examples_num/batchSize)
-        for batch in range(0, 1):
+        for batch in range(0, num_batches):
             img_batch, label_batch = getBatch(augmented_trainsetDir, train_list, startIndex, endIndex)
             model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
             # model.train_on_batch(img_batch, label_batch)
