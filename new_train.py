@@ -96,17 +96,18 @@ def getBatch(dataDir, data_list, startIndex, endIndex):
 
     return img_batch, label_batch
 
+activation = LeakyReLU(alpha=0.001)
 
 # Model
 model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=24, kernel_size=(4, 4), strides=(4, 4), activation='relu'))
-model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3), activation='relu'))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=24, kernel_size=(4, 4), strides=(4, 4), activation=activation))
+model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3), activation=activation))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3), activation='relu'))
-model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation='relu'))
+model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3), activation=activation))
+model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation=activation))
 # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Flatten())
-model.add(Dense(32, activation='relu'))
+model.add(Dense(32, activation=activation))
 model.add(Dropout(0.5))
 model.add(Dense(2, activation='sigmoid'))
 
@@ -115,13 +116,13 @@ model.summary()
 
 # Compile model
 opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch19-acc14.63.h5')
+model.load_weights('models/best-net-epoch_18-acc_16.43.h5')
 model.compile(loss='mse', optimizer=opt)
 
 
 # Training
 def train_model():
-    best_accuracy = 14.63
+    best_accuracy = 16.43
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
