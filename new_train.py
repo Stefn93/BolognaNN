@@ -120,7 +120,7 @@ model.compile(loss='mse', optimizer='adadelta')
 
 # Training
 def train_model():
-    best_accuracy = 0.0
+    best_accuracy = 14.63
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
@@ -149,7 +149,7 @@ def train_model():
         print("Test_accuracy = " + str(test_accuracy) + "%\n")
 
         if test_accuracy > best_accuracy:
-            model.save_weights('models/best-net-epochs_' + str(epoch + 1) + '-acc_' + str(test_accuracy) + '.h5',
+            model.save_weights('models/best-net-epoch_' + str(epoch + 1) + '-acc_' + str(test_accuracy) + '.h5',
                                overwrite=True)
             best_accuracy = test_accuracy
             print('Best model saved with accuracy: ' + str(best_accuracy) + '%')
