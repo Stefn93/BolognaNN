@@ -14,8 +14,8 @@ testsetDir = 'bologna_test_sparse/'
 augmented_trainsetDir = 'bologna_augmented_train_sparse/'
 augmented_testsetDir = 'bologna_augmented_test_sparse/'
 
-batchSize = 64
-epochs = 10
+batchSize = 128
+epochs = 20
 num_classes = 2
 train_examples_num = len(os.listdir(augmented_trainsetDir))
 test_examples_num = len(os.listdir(augmented_testsetDir))
@@ -115,7 +115,8 @@ model.summary()
 
 # Compile model
 opt = optimizers.RMSprop(lr=0.001)
-model.compile(loss='mse', optimizer='adadelta')
+model.load_weights('models/best-net-epoch19-acc14.63.h5')
+model.compile(loss='mse', optimizer=opt)
 
 
 # Training
