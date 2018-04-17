@@ -5,7 +5,6 @@ import re
 from PIL import Image
 from keras.layers import *
 from keras.models import *
-import keras.callbacks
 
 
 datasetDir = 'bologna_dataset_sparse/'
@@ -15,7 +14,7 @@ augmented_trainsetDir = 'bologna_augmented_train_sparse/'
 augmented_testsetDir = 'bologna_augmented_test_sparse/'
 
 batchSize = 128
-epochs = 20
+epochs = 50
 num_classes = 2
 train_examples_num = len(os.listdir(augmented_trainsetDir))
 test_examples_num = len(os.listdir(augmented_testsetDir))
@@ -86,7 +85,7 @@ def getBatch(dataDir, data_list, startIndex, endIndex):
 
     index = 0
     for image in data_list:
-        if index >= startIndex and index < endIndex:
+        if startIndex <= index < endIndex:
             img_batch.append(np.asarray(Image.open(dataDir+image)))
             label_batch.append(normalizeCoords(getLabel(image)))
         index += 1
@@ -96,18 +95,18 @@ def getBatch(dataDir, data_list, startIndex, endIndex):
 
     return img_batch, label_batch
 
-activation = LeakyReLU(alpha=0.001)
-
 # Model
 model = Sequential()
-model.add(Conv2D(input_shape=(300, 300, 3), filters=24, kernel_size=(4, 4), strides=(4, 4), activation=activation))
-model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3), activation=activation))
+model.add(Conv2D(input_shape=(300, 300, 3), filters=24, kernel_size=(4, 4), strides=(3, 3), activation='relu'))
+model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(3, 3), activation=activation))
-model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation=activation))
+model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), activation='relu'))
+model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation='relu'))
 # model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Flatten())
-model.add(Dense(32, activation=activation))
+model.add(Dense(64, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(32, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(2, activation='sigmoid'))
 
@@ -115,14 +114,15 @@ model.add(Dense(2, activation='sigmoid'))
 model.summary()
 
 # Compile model
-opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch_18-acc_16.43.h5')
+#opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
+opt = optimizers.RMSprop(lr=0.0001)
+model.load_weights('models/best-net-epoch_41-acc_16.62.h5')
 model.compile(loss='mse', optimizer=opt)
 
 
 # Training
 def train_model():
-    best_accuracy = 16.43
+    best_accuracy = 16.62
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
@@ -138,7 +138,10 @@ def train_model():
             batch_loss = model.train_on_batch(img_batch, label_batch)
             startIndex = endIndex
             endIndex = startIndex + batchSize
-            print("Batch " + str(batch + 1) + "/" + str(num_batches) + "    Batch loss: " + str(batch_loss))
+            print("Epoch: " + str(epoch+1) + "/" + str(epochs)
+                  + "    Batch " + str(batch + 1) + "/" + str(num_batches)
+                  + "    Batch loss: " + str(batch_loss)
+                  + "    Best accuracy: " + str(best_accuracy))
 
         #print("Calculating predictions on train set...")
         #train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
@@ -151,7 +154,7 @@ def train_model():
         print("Test_accuracy = " + str(test_accuracy) + "%\n")
 
         if test_accuracy > best_accuracy:
-            model.save_weights('models/best-net-epoch_' + str(epoch + 1) + '-acc_' + str(test_accuracy) + '.h5',
+            model.save_weights('models/best-net-epoch_' + str(epoch+1) + '-acc_' + str(test_accuracy) + '.h5',
                                overwrite=True)
             best_accuracy = test_accuracy
             print('Best model saved with accuracy: ' + str(best_accuracy) + '%')
@@ -176,6 +179,9 @@ def calculatePredictions(dir, list, num_samples):
 
         startIndex = endIndex
         endIndex = startIndex + batchSize
+
+    predictions = predictions[1:, :]
+    real_labels = real_labels[1:, :]
 
     return predictions, real_labels
 
