@@ -115,8 +115,8 @@ model.summary()
 
 # Compile model
 #opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
-opt = optimizers.RMSprop(lr=0.0001)
-model.load_weights('models/best-net-epoch_41-acc_16.62.h5')
+opt = optimizers.RMSprop(lr=0.00005)
+model.load_weights('models/best-net-epoch_5-acc_18.37.h5')
 model.compile(loss='mse', optimizer=opt)
 
 
