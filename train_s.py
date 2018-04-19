@@ -12,12 +12,14 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 augmented_trainsetDir = 'bologna_augmented_train_sparse/'
 augmented_testsetDir = 'bologna_augmented_test_sparse/'
+__train__ = trainsetDir
+__test__ = testsetDir
 
 batchSize = 128
 epochs = 50
 num_classes = 2
-train_examples_num = len(os.listdir(augmented_trainsetDir))
-test_examples_num = len(os.listdir(augmented_testsetDir))
+train_examples_num = len(os.listdir(__train__))
+test_examples_num = len(os.listdir(__test__))
 
 
 # Data augmentation, extract 2 images from each image and saves it into new folder
@@ -50,6 +52,13 @@ def getLabel(image_name):
     image_name = image_name.split('_')
     x = float(image_name[0].replace('X', ""))
     y = float(image_name[1].replace('Y', ""))
+    return [x, y]
+
+def getAltLabel(image_name):
+    image_name = image_name.replace(".jpg", "")
+    image_name = image_name.split('_')
+    x = float(image_name[1].replace('X', ""))
+    y = float(image_name[2].replace('Y', ""))
     return [x, y]
 
 # Find min and max values from test and train labels
@@ -87,7 +96,7 @@ def getBatch(dataDir, data_list, startIndex, endIndex):
     for image in data_list:
         if startIndex <= index < endIndex:
             img_batch.append(np.asarray(Image.open(dataDir+image)))
-            label_batch.append(normalizeCoords(getLabel(image)))
+            label_batch.append(normalizeCoords(getAltLabel(image)))
         index += 1
 
     img_batch = np.asarray(img_batch)
@@ -115,9 +124,9 @@ model.summary()
 
 # Compile model
 #opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
-opt = optimizers.RMSprop(lr=0.00005)
-model.load_weights('models/best-net-epoch_5-acc_18.37.h5')
-model.compile(loss='mse', optimizer=opt)
+opt = optimizers.RMSprop(lr=0.001)
+model.load_weights('models/best-net-epoch_33-acc_21.41.h5')
+model.compile(loss='mae', optimizer=opt)
 
 
 # Training
@@ -126,14 +135,14 @@ def train_model():
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
-        train_list = shuffleList(augmented_trainsetDir)
-        test_list = shuffleList(augmented_testsetDir)
+        train_list = shuffleList(__train__)
+        test_list = shuffleList(__test__)
         startIndex = 0
         endIndex = batchSize
 
         num_batches = int(train_examples_num/batchSize)
         for batch in range(0, num_batches):
-            img_batch, label_batch = getBatch(augmented_trainsetDir, train_list, startIndex, endIndex)
+            img_batch, label_batch = getBatch(__train__, train_list, startIndex, endIndex)
             #model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
             batch_loss = model.train_on_batch(img_batch, label_batch)
             startIndex = endIndex
@@ -147,11 +156,11 @@ def train_model():
         #train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
 
         print("Calculating predictions on test set...")
-        test_predictions, test_labels = calculatePredictions(augmented_testsetDir, test_list, test_examples_num)
+        test_predictions, test_labels = calculatePredictions(__test__, test_list, test_examples_num)
 
-        print("Calculating accuracy on test set...")
+        print("Calculating accuracy on test set...\n")
         test_accuracy = custom_accuracy(test_predictions, test_labels)
-        print("Test_accuracy = " + str(test_accuracy) + "%\n")
+        print("Test_accuracy = " + str(test_accuracy) + "%")
 
         if test_accuracy > best_accuracy:
             model.save_weights('models/best-net-epoch_' + str(epoch+1) + '-acc_' + str(test_accuracy) + '.h5',
@@ -159,7 +168,7 @@ def train_model():
             best_accuracy = test_accuracy
             print('Best model saved with accuracy: ' + str(best_accuracy) + '%')
         else:
-            print('Accuracy didn\'t improve: ' + str(test_accuracy) + '% is worse than ' + str(best_accuracy) + '%')
+            print('Accuracy didn\'t improve: ' + str(test_accuracy) + '% is worse than ' + str(best_accuracy) + '%\n')
 
 
 # Calculate predictions on a set of samples (train/test)
