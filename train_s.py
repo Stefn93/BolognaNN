@@ -16,7 +16,7 @@ __train__ = trainsetDir
 __test__ = testsetDir
 
 batchSize = 128
-epochs = 50
+epochs = 100
 num_classes = 2
 train_examples_num = len(os.listdir(__train__))
 test_examples_num = len(os.listdir(__test__))
@@ -125,7 +125,7 @@ model.summary()
 # Compile model
 #opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
 opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch_48-acc_29.24.h5')
+model.load_weights('models/Threshold/500m/Best-nets/best-net-epoch_82-acc_36.68.h5')
 model.compile(loss='mae', optimizer=opt)
 
 
@@ -195,10 +195,19 @@ def calculatePredictions(dir, list, num_samples):
     return predictions, real_labels
 
 
+# Threshold 500m
+# x_thresh = 0.0968141592920358
+# y_thresh = 0.05829173599556346
+# Threshold 200m
+# x_thresh = 0.03872566371681432
+# y_thresh = 0.023316694398225384
+# Threshold 100m
+# x_thresh = 0,01936283185840716
+# y_thresh = 0.011658347199112692
 # Calculate accuracy based on 500m threshold in both latitude and longitude
 def custom_accuracy(predictions, real_labels):
-    x_thresh = 0.0968141592920358
-    y_thresh = 0.05829173599556346
+    x_thresh = 0.03872566371681432
+    y_thresh = 0.023316694398225384
     num_correct_predictions = 0
 
     num_samples, y = predictions.shape
