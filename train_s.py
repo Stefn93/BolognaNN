@@ -5,7 +5,7 @@ import re
 from PIL import Image
 from keras.layers import *
 from keras.models import *
-
+from datetime import datetime
 
 datasetDir = 'bologna_dataset_sparse/'
 trainsetDir = 'bologna_train_sparse/'
@@ -124,14 +124,15 @@ model.summary()
 
 # Compile model
 #opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
-opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/Threshold/500m/Best-nets/best-net-epoch_82-acc_36.68.h5')
+opt = optimizers.RMSprop(lr=0.00005)
+#model.load_weights('models/Threshold/500m/Best-nets/best-net-epoch_82-acc_36.68.h5')
+model.load_weights('models/best-net-epoch_35-acc_16.81.h5')
 model.compile(loss='mae', optimizer=opt)
 
 
 # Training
 def train_model():
-    best_accuracy = 16.62
+    best_accuracy = 15.31
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
@@ -148,6 +149,7 @@ def train_model():
             startIndex = endIndex
             endIndex = startIndex + batchSize
             print("Epoch: " + str(epoch+1) + "/" + str(epochs)
+
                   + "    Batch " + str(batch + 1) + "/" + str(num_batches)
                   + "    Batch loss: " + str(batch_loss)
                   + "    Best accuracy: " + str(best_accuracy))
@@ -206,8 +208,8 @@ def calculatePredictions(dir, list, num_samples):
 # y_thresh = 0.011658347199112692
 # Calculate accuracy based on 500m threshold in both latitude and longitude
 def custom_accuracy(predictions, real_labels):
-    x_thresh = 0.03872566371681432
-    y_thresh = 0.023316694398225384
+    x_thresh = 0.0968141592920358
+    y_thresh = 0.05829173599556346
     num_correct_predictions = 0
 
     num_samples, y = predictions.shape
@@ -225,3 +227,4 @@ def custom_accuracy(predictions, real_labels):
 train_model()
 # dataAugmentation(trainsetDir, augmented_trainsetDir, train_examples_num)
 # dataAugmentation(testsetDir, augmented_testsetDir, test_examples_num)
+print(str(datetime.now()))
