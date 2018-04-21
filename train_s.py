@@ -138,7 +138,7 @@ model.summary()
 
 # Compile model
 #opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
-opt = optimizers.RMSprop(lr=0.00005)
+opt = optimizers.RMSprop(lr=0.001)
 model.load_weights('models/best-net-epoch_35-acc_16.81.h5')
 model.compile(loss='mae', optimizer=opt)
 
@@ -162,7 +162,6 @@ def train_model():
             startIndex = endIndex
             endIndex = startIndex + batchSize
             print("Epoch: " + str(epoch+1) + "/" + str(epochs)
-
                   + "    Batch " + str(batch + 1) + "/" + str(num_batches)
                   + "    Batch loss: " + str(batch_loss)
                   + "    Best accuracy: " + str(best_accuracy))
@@ -174,8 +173,14 @@ def train_model():
         test_predictions, test_labels = calculatePredictions(__test__, test_list, test_examples_num)
 
         print("Calculating accuracy on test set...\n")
-        test_accuracy = custom_accuracy(test_predictions, test_labels)
-        print("Test_accuracy = " + str(test_accuracy) + "%")
+        test_accuracy = custom_accuracy(test_predictions, test_labels, 0.0968141592920358, 0.05829173599556346)
+        print("Test_accuracy on 500m range: " + str(test_accuracy) + "%\n")
+
+        test_accuracy_200 = custom_accuracy(test_predictions, test_labels, 0.03872566371681432, 0.023316694398225384)
+        print("Test_accuracy on 200m range: " + str(test_accuracy_200) + "%\n")
+
+        test_accuracy_100 = custom_accuracy(test_predictions, test_labels, 0.01936283185840716, 0.011658347199112692)
+        print("Test_accuracy on 100m range: " + str(test_accuracy_100) + "%\n")
 
         if test_accuracy > best_accuracy:
             model.save_weights('models/best-net-epoch_' + str(epoch+1) + '-acc_' + str(test_accuracy) + '.h5',
@@ -185,6 +190,15 @@ def train_model():
         else:
             print('Accuracy didn\'t improve: ' + str(test_accuracy) + '% is worse than ' + str(best_accuracy) + '%\n')
 
+            # Threshold 500m
+            # x_thresh = 0.0968141592920358
+            # y_thresh = 0.05829173599556346
+            # Threshold 200m
+            # x_thresh = 0.03872566371681432
+            # y_thresh = 0.023316694398225384
+            # Threshold 100m
+            # x_thresh = 0.01936283185840716
+            # y_thresh = 0.011658347199112692
 
 # Calculate predictions on a set of samples (train/test)
 def calculatePredictions(dir, list, num_samples):
@@ -220,9 +234,9 @@ def calculatePredictions(dir, list, num_samples):
 # x_thresh = 0,01936283185840716
 # y_thresh = 0.011658347199112692
 # Calculate accuracy based on 500m threshold in both latitude and longitude
-def custom_accuracy(predictions, real_labels):
-    x_thresh = 0.0968141592920358
-    y_thresh = 0.05829173599556346
+def custom_accuracy(predictions, real_labels, x_thresh, y_thresh):
+    #x_thresh = 0.0968141592920358
+    #y_thresh = 0.05829173599556346
     num_correct_predictions = 0
 
     num_samples, y = predictions.shape
