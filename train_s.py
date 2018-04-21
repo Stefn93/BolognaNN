@@ -12,8 +12,8 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 augmented_trainsetDir = 'bologna_augmented_train_sparse/'
 augmented_testsetDir = 'bologna_augmented_test_sparse/'
-__train__ = trainsetDir
-__test__ = testsetDir
+__train__ = augmented_trainsetDir
+__test__ = augmented_testsetDir
 
 batchSize = 128
 epochs = 100
@@ -23,19 +23,33 @@ test_examples_num = len(os.listdir(__test__))
 
 
 # Data augmentation, extract 2 images from each image and saves it into new folder
-def dataAugmentation(dir, newDir, num_samples):
+def data_augmentation_doublecrop(dir, newDir, num_samples):
     files = os.listdir(dir)
-    i=1
+    i = 1
     for image_name in files:
         image = Image.open(dir + image_name)
         first_crop = (image.crop((50, 50, 250, 250))).resize((300, 300), Image.ANTIALIAS)
         second_crop = (image.crop((100, 100, 200, 200))).resize((300, 300), Image.ANTIALIAS)
         modified_name1 = (image_name.replace(".jpg", "")) + '-aug1' + '.jpg'
         modified_name2 = (image_name.replace(".jpg", "")) + '-aug2' + '.jpg'
-        image.save(newDir+image_name)
-        first_crop.save(newDir+modified_name1)
-        second_crop.save(newDir+modified_name2)
+        image.save(newDir + image_name)
+        first_crop.save(newDir + modified_name1)
+        second_crop.save(newDir + modified_name2)
 
+        print("Image " + str(i) + "/" + str(num_samples))
+        i += 1
+
+
+def data_augmentation_0_180(dir, newDir, num_samples):
+    files = os.listdir(dir)
+    i = 1
+    for image_name in files:
+        if "_0deg" in image_name or "_180deg" in image_name:
+            image = Image.open(dir + image_name)
+            crop = (image.crop((100, 100, 200, 200))).resize((300, 300), Image.ANTIALIAS)
+            new_name = image_name.replace(".jpg", "-aug.jpg")
+            image.save(newDir + image_name)
+            crop.save(newDir + new_name)
         print("Image " + str(i) + "/" + str(num_samples))
         i += 1
 
@@ -125,7 +139,6 @@ model.summary()
 # Compile model
 #opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
 opt = optimizers.RMSprop(lr=0.00005)
-#model.load_weights('models/Threshold/500m/Best-nets/best-net-epoch_82-acc_36.68.h5')
 model.load_weights('models/best-net-epoch_35-acc_16.81.h5')
 model.compile(loss='mae', optimizer=opt)
 
@@ -223,8 +236,7 @@ def custom_accuracy(predictions, real_labels):
     accuracy = round(((num_correct_predictions/num_samples)*100), 2)
     return accuracy
 
-
+# data_augmentation_0_180(trainsetDir, augmented_trainsetDir, train_examples_num)
+# data_augmentation_0_180(testsetDir, augmented_testsetDir, test_examples_num)
 train_model()
-# dataAugmentation(trainsetDir, augmented_trainsetDir, train_examples_num)
-# dataAugmentation(testsetDir, augmented_testsetDir, test_examples_num)
-print(str(datetime.now()))
+print("\n" + str(datetime.now().ctime()))
