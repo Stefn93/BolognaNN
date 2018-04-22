@@ -125,7 +125,7 @@ model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), activation='rel
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Conv2D(filters=32, kernel_size=(3, 3), strides=(2, 2), activation='relu'))
 model.add(Conv2D(filters=64, kernel_size=(2, 2), strides=(2, 2), activation='relu'))
-# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+#model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Flatten())
 model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.5))
@@ -137,15 +137,15 @@ model.add(Dense(2, activation='sigmoid'))
 model.summary()
 
 # Compile model
-#opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
-opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch_35-acc_16.81.h5')
+opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
+#opt = optimizers.RMSprop(lr=0.001)
+model.load_weights('models/best-net-epoch_64-acc_26.48.h5')
 model.compile(loss='mae', optimizer=opt)
 
 
 # Training
 def train_model():
-    best_accuracy = 15.31
+    best_accuracy = 26.48
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 

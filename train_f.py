@@ -17,8 +17,6 @@ augmented_testsetDir = 'bologna_augmented_test_sparse/'
 batchSize = 128
 epochs = 50
 num_classes = 2
-train_examples_num = len(os.listdir(augmented_trainsetDir))
-test_examples_num = len(os.listdir(augmented_testsetDir))
 
 
 # Data augmentation, extract 2 images from each image and saves it into new folder
@@ -46,11 +44,11 @@ def shuffleList(folderPath):
     return files
 
 # Extract x,y coordinates from image name
-def getLabel(image_name):
+def getLabel(image_name, shifter):
     image_name = image_name.replace(".jpg", "")
     image_name = image_name.split('_')
-    x = float(image_name[0].replace('X', ""))
-    y = float(image_name[1].replace('Y', ""))
+    x = float(image_name[0+shifter].replace('X', ""))
+    y = float(image_name[1+shifter].replace('Y', ""))
     return [x, y]
 
 # Find min and max values from test and train labels
@@ -59,7 +57,7 @@ def getMinMaxValues(dataDir):
     dataset_coords = []
 
     for data in dataset_examples:
-        dataset_coords.append(getLabel(data))
+        dataset_coords.append(getLabel(data, 0))
 
     dataset_coords = np.asarray(dataset_coords)
 
@@ -88,7 +86,7 @@ def getBatch(dataDir, data_list, startIndex, endIndex):
     for image in data_list:
         if startIndex <= index < endIndex:
             img_batch.append(np.asarray(Image.open(dataDir+image)))
-            label_batch.append(normalizeCoords(getLabel(image)))
+            label_batch.append(normalizeCoords(getLabel(image,0)))
         index += 1
 
     img_batch = np.asarray(img_batch)
@@ -114,24 +112,27 @@ model.summary()
 
 # Compile model
 opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch_18-acc_16.43.h5')
-model.compile(loss='mse', optimizer=opt)
+model.load_weights('models/best-net-epoch_13-acc_9.35.h5')
+model.compile(loss='mae', optimizer=opt)
 
 
 # Training
-def train_model():
-    best_accuracy = 0.0
+def train_model(trainDir, testDir):
+    train_examples_num = len(os.listdir(trainDir))
+    test_examples_num = len(os.listdir(testDir))
+
+    best_accuracy = 9.35
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
-        train_list = shuffleList(augmented_trainsetDir)
-        test_list = shuffleList(augmented_testsetDir)
+        train_list = shuffleList(trainDir)
+        test_list = shuffleList(testDir)
         startIndex = 0
         endIndex = batchSize
 
         num_batches = int(train_examples_num/batchSize)
         for batch in range(0, num_batches):
-            img_batch, label_batch = getBatch(augmented_trainsetDir, train_list, startIndex, endIndex)
+            img_batch, label_batch = getBatch(trainDir, train_list, startIndex, endIndex)
             #model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
             batch_loss = model.train_on_batch(img_batch, label_batch)
             startIndex = endIndex
@@ -145,7 +146,7 @@ def train_model():
         #train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
 
         print("Calculating predictions on test set...")
-        test_predictions, test_labels = calculatePredictions(augmented_testsetDir, test_list, test_examples_num)
+        test_predictions, test_labels = calculatePredictions(testDir, test_list, test_examples_num)
 
         print("Calculating accuracy on test set...")
         test_accuracy = custom_accuracy(test_predictions, test_labels)
@@ -202,6 +203,6 @@ def custom_accuracy(predictions, real_labels):
     return accuracy
 
 
-train_model()
+train_model(augmented_trainsetDir, augmented_testsetDir)
 # dataAugmentation(trainsetDir, augmented_trainsetDir, train_examples_num)
 # dataAugmentation(testsetDir, augmented_testsetDir, test_examples_num)
