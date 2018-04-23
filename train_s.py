@@ -6,6 +6,7 @@ from PIL import Image
 from keras.layers import *
 from keras.models import *
 from datetime import datetime
+import time
 
 datasetDir = 'bologna_dataset_sparse/'
 trainsetDir = 'bologna_train_sparse/'
@@ -16,7 +17,7 @@ __train__ = augmented_trainsetDir
 __test__ = augmented_testsetDir
 
 batchSize = 128
-epochs = 100
+epochs = 200
 num_classes = 2
 train_examples_num = len(os.listdir(__train__))
 test_examples_num = len(os.listdir(__test__))
@@ -44,15 +45,15 @@ def data_augmentation_0_180(dir, newDir, num_samples):
     files = os.listdir(dir)
     i = 1
     for image_name in files:
+        image = Image.open(dir + image_name)
         if "_0deg" in image_name or "_180deg" in image_name:
-            image = Image.open(dir + image_name)
             crop = (image.crop((100, 100, 200, 200))).resize((300, 300), Image.ANTIALIAS)
             new_name = image_name.replace(".jpg", "-aug.jpg")
-            image.save(newDir + image_name)
             crop.save(newDir + new_name)
+        image.save(newDir + image_name)
+
         print("Image " + str(i) + "/" + str(num_samples))
         i += 1
-
 
 # Shuffle the images in the folder and returns list of shuffled image names
 def shuffleList(folderPath):
@@ -137,15 +138,16 @@ model.add(Dense(2, activation='sigmoid'))
 model.summary()
 
 # Compile model
-opt = optimizers.RMSprop(lr=0.001, decay=0.00005)
+opt = optimizers.RMSprop(lr=0.001, decay=0.000025)
 #opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch_64-acc_26.48.h5')
+#model.load_weights('models/best-net-epoch_31-acc_30.45.h5')
 model.compile(loss='mae', optimizer=opt)
 
 
 # Training
 def train_model():
     best_accuracy = 26.48
+    batch_time, start_time, end_time = 0, 0, 0
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
 
@@ -156,29 +158,48 @@ def train_model():
 
         num_batches = int(train_examples_num/batchSize)
         for batch in range(0, num_batches):
+            start_time = datetime.now()
+
             img_batch, label_batch = getBatch(__train__, train_list, startIndex, endIndex)
-            #model.fit(img_batch, label_batch, batch_size=batchSize, epochs=1, verbose=1)
             batch_loss = model.train_on_batch(img_batch, label_batch)
             startIndex = endIndex
             endIndex = startIndex + batchSize
-            print("Epoch: " + str(epoch+1) + "/" + str(epochs)
-                  + "    Batch " + str(batch + 1) + "/" + str(num_batches)
-                  + "    Batch loss: " + str(batch_loss)
-                  + "    Best accuracy: " + str(best_accuracy))
+            if not batch_time == 0:
+                print("Epoch: " + str(epoch + 1) + "/" + str(epochs)
+                      + "    Batch " + str(batch + 1) + "/" + str(num_batches)
+                      + "    Batch loss: " + str(batch_loss)
+                      + "    Best accuracy: " + str(best_accuracy)
+                      + "    Remaining time: " + str(int(batch_time.seconds * (num_batches - batch) / 60)) + "m "
+                      + str(int(batch_time.seconds * (num_batches - batch) % 60)) + "s")
+            else:
+                print("Epoch: " + str(epoch + 1) + "/" + str(epochs)
+                      + "    Batch " + str(batch + 1) + "/" + str(num_batches)
+                      + "    Batch loss: " + str(batch_loss)
+                      + "    Best accuracy: " + str(best_accuracy))
 
-        #print("Calculating predictions on train set...")
-        #train_predictions, train_labels = calculatePredictions(trainsetDir, train_list, train_examples_num)
+            end_time = datetime.now()
+            batch_time = end_time - start_time
 
         print("Calculating predictions on test set...")
         test_predictions, test_labels = calculatePredictions(__test__, test_list, test_examples_num)
 
         print("Calculating accuracy on test set...\n")
+
+        # Threshold 500m
+        # x_thresh = 0.0968141592920358
+        # y_thresh = 0.05829173599556346
         test_accuracy = custom_accuracy(test_predictions, test_labels, 0.0968141592920358, 0.05829173599556346)
         print("Test_accuracy on 500m range: " + str(test_accuracy) + "%\n")
 
+        # Threshold 200m
+        # x_thresh = 0.03872566371681432
+        # y_thresh = 0.023316694398225384
         test_accuracy_200 = custom_accuracy(test_predictions, test_labels, 0.03872566371681432, 0.023316694398225384)
         print("Test_accuracy on 200m range: " + str(test_accuracy_200) + "%\n")
 
+        # Threshold 100m
+        # x_thresh = 0.01936283185840716
+        # y_thresh = 0.011658347199112692
         test_accuracy_100 = custom_accuracy(test_predictions, test_labels, 0.01936283185840716, 0.011658347199112692)
         print("Test_accuracy on 100m range: " + str(test_accuracy_100) + "%\n")
 
@@ -190,15 +211,6 @@ def train_model():
         else:
             print('Accuracy didn\'t improve: ' + str(test_accuracy) + '% is worse than ' + str(best_accuracy) + '%\n')
 
-            # Threshold 500m
-            # x_thresh = 0.0968141592920358
-            # y_thresh = 0.05829173599556346
-            # Threshold 200m
-            # x_thresh = 0.03872566371681432
-            # y_thresh = 0.023316694398225384
-            # Threshold 100m
-            # x_thresh = 0.01936283185840716
-            # y_thresh = 0.011658347199112692
 
 # Calculate predictions on a set of samples (train/test)
 def calculatePredictions(dir, list, num_samples):
@@ -224,21 +236,9 @@ def calculatePredictions(dir, list, num_samples):
     return predictions, real_labels
 
 
-# Threshold 500m
-# x_thresh = 0.0968141592920358
-# y_thresh = 0.05829173599556346
-# Threshold 200m
-# x_thresh = 0.03872566371681432
-# y_thresh = 0.023316694398225384
-# Threshold 100m
-# x_thresh = 0,01936283185840716
-# y_thresh = 0.011658347199112692
-# Calculate accuracy based on 500m threshold in both latitude and longitude
+# Calculate accuracy based on a threshold in both latitude and longitude
 def custom_accuracy(predictions, real_labels, x_thresh, y_thresh):
-    #x_thresh = 0.0968141592920358
-    #y_thresh = 0.05829173599556346
     num_correct_predictions = 0
-
     num_samples, y = predictions.shape
 
     for i in range(0, num_samples):
@@ -253,4 +253,4 @@ def custom_accuracy(predictions, real_labels, x_thresh, y_thresh):
 # data_augmentation_0_180(trainsetDir, augmented_trainsetDir, train_examples_num)
 # data_augmentation_0_180(testsetDir, augmented_testsetDir, test_examples_num)
 train_model()
-print("\n" + str(datetime.now().ctime()))
+
