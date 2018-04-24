@@ -138,18 +138,18 @@ model.add(Dense(2, activation='sigmoid'))
 model.summary()
 
 # Compile model
-opt = optimizers.RMSprop(lr=0.001, decay=0.000025)
+opt = optimizers.RMSprop(lr=0.00025, decay=0.000025)
 #opt = optimizers.RMSprop(lr=0.001)
-#model.load_weights('models/best-net-epoch_31-acc_30.45.h5')
+model.load_weights('models/best-net-epoch_191-acc_29.98.h5')
 model.compile(loss='mae', optimizer=opt)
 
 
 # Training
 def train_model():
     best_accuracy = 26.48
-    batch_time, start_time, end_time = 0, 0, 0
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
+        batch_time, start_time, end_time = 0, 0, 0
 
         train_list = shuffleList(__train__)
         test_list = shuffleList(__test__)
@@ -169,8 +169,11 @@ def train_model():
                       + "    Batch " + str(batch + 1) + "/" + str(num_batches)
                       + "    Batch loss: " + str(batch_loss)
                       + "    Best accuracy: " + str(best_accuracy)
-                      + "    Remaining time: " + str(int(batch_time.seconds * (num_batches - batch) / 60)) + "m "
-                      + str(int(batch_time.seconds * (num_batches - batch) % 60)) + "s")
+                      + "    Remaining time: "
+                      + str(int(batch_time.microseconds/1000000 * (num_batches - batch) / 60))
+                      + "m "
+                      + str(int((batch_time.microseconds/1000000 * (num_batches - batch)) % 60))
+                      + "s")
             else:
                 print("Epoch: " + str(epoch + 1) + "/" + str(epochs)
                       + "    Batch " + str(batch + 1) + "/" + str(num_batches)
