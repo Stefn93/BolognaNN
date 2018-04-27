@@ -13,8 +13,8 @@ trainsetDir = 'bologna_train_sparse/'
 testsetDir = 'bologna_test_sparse/'
 augmented_trainsetDir = 'bologna_augmented_train_sparse/'
 augmented_testsetDir = 'bologna_augmented_test_sparse/'
-__train__ = augmented_trainsetDir
-__test__ = augmented_testsetDir
+__train__ = trainsetDir
+__test__ = testsetDir
 
 batchSize = 128
 epochs = 200
@@ -138,15 +138,15 @@ model.add(Dense(2, activation='sigmoid'))
 model.summary()
 
 # Compile model
-opt = optimizers.RMSprop(lr=0.00025, decay=0.000025)
+opt = optimizers.RMSprop(lr=0.0005, decay=0.000025)
 #opt = optimizers.RMSprop(lr=0.001)
-model.load_weights('models/best-net-epoch_191-acc_29.98.h5')
+model.load_weights('models/Best/best-net-epoch_2-acc_39.34.h5')
 model.compile(loss='mae', optimizer=opt)
 
 
 # Training
 def train_model():
-    best_accuracy = 26.48
+    best_accuracy = 39.34
     for epoch in range(0, epochs):
         print("Epoch ---> " + str(epoch + 1) + "/" + str(epochs))
         batch_time, start_time, end_time = 0, 0, 0
