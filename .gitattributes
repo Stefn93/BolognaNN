@@ -1,0 +1,4 @@
+$ cat .gitattributes
+*.jpg linguist-language=Python
+*.py linguist-language=Python
+*.lbl linguist-language=Python
